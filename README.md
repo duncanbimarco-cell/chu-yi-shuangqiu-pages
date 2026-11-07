@@ -1,6 +1,6 @@
-# 初一年级班级球类联赛 · 赛程积分系统
+# 初一年级足球·篮球联赛 · 赛程积分系统
 
-**已上线：https://duncanbimarco-cell.github.io/ball-league/**
+发布后网址：`https://duncanbimarco-cell.github.io/chu-yi-shuangqiu-pages/`
 
 **16 个班全部参加足球和篮球两个项目**，共 **80 场**：
 
@@ -8,21 +8,20 @@
 - **第二节**：轮换 —— 单数组班打篮球，双数组班踢足球
 - 5 轮 × 2 节 × 8 场 = 80 场；**每班足球 5 场 + 篮球 5 场，共 10 场**
 - 积分榜按「单数组班 / 双数组班」分别排名（两组之间不交叉比赛）
-纯静态网页，数据存在本仓库 `data/matches.json`，通过 GitHub Contents API 实时写回，**不需要服务器、不花钱**。
+纯静态网页，数据存在本仓库 `data/matches.json`，通过 GitHub Contents API 实时写回，**不需要服务器**。
 
 ## 一、谁看什么
 
 | 角色 | 怎么用 |
 |---|---|
 | 学生 / 各班 | 扫码或打开网址 → 看本周赛程、比分、积分榜、考勤（不用登录） |
-| 裁判 / 组委会 | 打开网址 → 底部「录入」→ 输入口令（`config.js` 里的 `adminCode`，默认 `2026`）+ Token |
+| 裁判 / 组委会 | 打开网址 → 底部「录入」→ 输入口令（`config.js` 里的 `adminCode`）+ Token |
 
 ## 二、裁判准备（每台录入设备做一次）
 
-1. 生成 Token（一键打开，页面上直接点 Generate token）：
-   👉 https://github.com/settings/tokens/new?description=ball-league&scopes=repo
+1. 在 GitHub 创建 fine-grained Token：只选择本仓库，并授予 `Contents: Read and write`；设定有效期。
 2. 打开网站 →「录入」→ 输入口令 + 粘贴 Token（只存在本机）。
-   换设备可用 `https://duncanbimarco-cell.github.io/ball-league/?token=你的Token` 打开自动填入。
+   换设备时重新手工粘贴 Token；**不要把 Token 放进链接、二维码或班级群**。
 
 ## 三、录一场比赛的流程（约 30 秒）
 
@@ -37,16 +36,17 @@
 - 「录入」页 → **轮次时间** → 填每轮日期 → 赛程页该轮自动打「本周」标记
 - 「录入」页 → **拍照上传赛程表** → 拍下周赛程图，显示在该轮赛程上方
 - 二维码海报：项目目录 `扫码看赛程.png`，可直接打印；网页内也可随时生成
-- **只读二维码**（贴公告栏/发班级群用）：`https://duncanbimarco-cell.github.io/ball-league/?readonly=1`
+- **只读二维码**（贴公告栏/发班级群用）：`https://duncanbimarco-cell.github.io/chu-yi-shuangqiu-pages/?readonly=1`
   带这个参数的链接会隐藏「录入」页签、强制观众模式，扫码的人改不了任何数据（海报：`扫码看赛程-只读.png`）
 
 ## 五、常见问题
 
 - **改了数据没变？** GitHub 数据同步要 1–2 分钟，「录入」页点「重新拉取数据」强制刷新。
 - **照片没显示？** 新上传的照片 GitHub 生效要几秒，刷新即可。
-- **积分规则**：`config.js` 的 `points`（默认胜 3 / 平 1 / 负 0）。
+- **积分规则**：足球胜 3 / 平 1 / 负 0；篮球胜 3 / 负 1、无平局。篮球请录入加时后的最终比分。
 - **改口令**：`config.js` 的 `adminCode`，改完 `git commit -am "口令" && git push`。
 - **安全**：Token 只存录入设备本机，不进仓库、不进代码。
+- **公开范围**：GitHub Pages 免费版通常要求公开仓库；不要上传学生姓名、肖像或其他不宜公开的考勤资料。建议只记录到场人数，照片只上传赛程表或不含人脸的赛场图片。
 
 ## 六、对阵表版本说明
 

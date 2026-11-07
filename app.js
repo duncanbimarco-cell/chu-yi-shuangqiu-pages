@@ -1,4 +1,4 @@
-/* 初一年级班级球类联赛 —— 赛程 / 比分 / 积分 / 考勤 */
+/* 初一年级足球·篮球联赛 —— 赛程 / 比分 / 积分 / 考勤 */
 (function () {
   'use strict';
 
@@ -291,6 +291,15 @@
 
   /* ---------- 工具 ---------- */
   function sportName(s) { return s === 'football' ? '足球' : '篮球'; }
+  function pointsFor(sport) {
+    var rules = CFG.points || {};
+    if (rules[sport]) return rules[sport];
+    // 兼容旧版配置：points 直接写成 { win, draw, lose }。
+    if (typeof rules.win === 'number') return rules;
+    return sport === 'basketball'
+      ? { win: 3, draw: 0, lose: 1 }
+      : { win: 3, draw: 1, lose: 0 };
+  }
   function teamName(n) { return n + '班'; }
   function isThisWeek(dateStr) {
     if (!dateStr) return false;
@@ -320,7 +329,7 @@
   /* ---------- 积分计算 ---------- */
   // parity: 1=单数组班, 0=双数组班, null=全部
   function standings(sport, parity) {
-    var P = CFG.points || { win: 3, draw: 1, lose: 0 };
+    var P = pointsFor(sport);
     var teams = {};
     (DATA.matches || []).forEach(function (m) {
       if (m.sport !== sport) return;
@@ -342,7 +351,8 @@
       B.gf += m.scoreB; B.ga += m.scoreA;
       if (m.scoreA > m.scoreB) { A.w++; B.l++; A.pts += P.win; B.pts += P.lose; }
       else if (m.scoreA < m.scoreB) { B.w++; A.l++; B.pts += P.win; A.pts += P.lose; }
-      else { A.d++; B.d++; A.pts += P.draw; B.pts += P.draw; }
+      // 篮球无平局；录入页会要求填写加时后的最终比分。
+      else if (sport === 'football') { A.d++; B.d++; A.pts += P.draw; B.pts += P.draw; }
     });
     rows.forEach(function (r) { r.gd = r.gf - r.ga; });
     rows.sort(function (a, b) {
@@ -424,17 +434,20 @@
   function groupTable(sport, parity, title) {
     var rows = standings(sport, parity);
     var unit = sport === 'football' ? '球' : '分';
+    var basketball = sport === 'basketball';
     var html = '<div class="round-title" style="margin:8px 2px 6px"><span class="dot" style="background:' +
       (sport === 'football' ? 'var(--football)' : 'var(--basketball)') + '"></span>' + title + '</div>';
     if (!rows.length) { return html + '<div class="card"><div class="empty">暂无数据</div></div>'; }
     html += '<div class="card"><table><thead><tr><th class="rk"></th>' +
-      '<th style="text-align:left;padding-left:12px">班级</th><th>场</th><th>胜</th><th>平</th><th>负</th>' +
+      '<th style="text-align:left;padding-left:12px">班级</th><th>场</th><th>胜</th>' +
+      (basketball ? '<th>负</th>' : '<th>平</th><th>负</th>') +
       '<th>进' + unit + '</th><th>失' + unit + '</th><th>净</th><th>积分</th></tr></thead><tbody>';
     rows.forEach(function (r, i) {
       var cls = i === 0 ? 'rank1' : (i === 1 ? 'rank2' : (i === 2 ? 'rank3' : ''));
       html += '<tr class="' + cls + '"><td class="rk"><span>' + (i + 1) + '</span></td>' +
         '<td class="name">' + teamName(r.cls) + '</td><td class="num">' + r.p + '</td>' +
-        '<td class="num">' + r.w + '</td><td class="num">' + r.d + '</td><td class="num">' + r.l + '</td>' +
+        '<td class="num">' + r.w + '</td>' +
+        (basketball ? '<td class="num">' + r.l + '</td>' : '<td class="num">' + r.d + '</td><td class="num">' + r.l + '</td>') +
         '<td class="num">' + r.gf + '</td><td class="num">' + r.ga + '</td>' +
         '<td class="num">' + (r.gd > 0 ? '+' : '') + r.gd + '</td>' +
         '<td class="num" style="font-weight:800">' + r.pts + '</td></tr>';
@@ -451,9 +464,12 @@
         '<span class="sub">16 个班全部参加</span></div>';
       html += groupTable(sp, 1, '单数组班（1/3/5/7/9/11/13/15班）');
       html += groupTable(sp, 0, '双数组班（2/4/6/8/10/12/14/16班）');
+      var P = pointsFor(sp);
+      var rule = sp === 'basketball'
+        ? '胜' + P.win + '分 · 负' + P.lose + '分 · 不设平局'
+        : '胜' + P.win + '分 · 平' + P.draw + '分 · 负' + P.lose + '分';
       html += '<div class="legend" style="border:1px solid var(--line);border-top:none;border-radius:0 0 14px 14px;background:#fff">' +
-        '胜' + (CFG.points || {}).win + '分 · 平' + (CFG.points || {}).draw + '分 · 负' + (CFG.points || {}).lose +
-        '分；同分先比净' + (sp === 'football' ? '球' : '分') + '，再比进' + (sp === 'football' ? '球' : '分') + '</div>';
+        rule + '；同分先比净' + (sp === 'football' ? '球' : '分') + '，再比进' + (sp === 'football' ? '球' : '分') + '</div>';
       html += '<div style="height:12px"></div>';
     });
     return html;
@@ -514,7 +530,7 @@
         '<div class="field"><label>GitHub Token（只存在本机，不会上传）</label><input type="password" id="tokenInput" placeholder="ghp_… / github_pat_…" value="' + esc(token) + '"></div>' +
         '<button class="btn" id="unlockBtn">进入录入</button>' +
         '<div class="divider"></div>' +
-        '<div class="hint">Token 申请：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 只选这个仓库，权限勾 <code>Contents: Read and write</code> → 生成后粘贴到这里。<br>换设备时可用链接 <code>?token=xxx</code> 打开自动填入。</div>' +
+        '<div class="hint">Token 申请：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 只选这个仓库，权限勾 <code>Contents: Read and write</code> → 生成后粘贴到这里。Token 只保存在本机浏览器，请勿发到群里、二维码或链接里。</div>' +
         '</div></div>';
     }
 
@@ -538,7 +554,7 @@
       '<span class="sub">' + (token ? '已填写 ✅' : '未填写 ❌') + '</span></div><div class="sheet-body">' +
       (token
         ? '<div class="hint">已存在本机：' + esc(token.slice(0, 7)) + '••••••　<a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub 令牌管理</a></div>'
-        : '<div class="warn">没填 Token 就保存不了数据。<br>生成（勾 repo）：<a href="https://github.com/settings/tokens/new?description=ball-league&scopes=repo" target="_blank" rel="noopener">点这里一键打开</a>，拉到底 Generate token，复制后粘到下面。</div>') +
+        : '<div class="warn">没填 Token 就保存不了数据。请在 GitHub 的 Fine-grained tokens 中创建 Token：只选择当前仓库，权限勾 <code>Contents: Read and write</code>，再复制粘贴到这里。</div>') +
       '<div style="height:8px"></div>' +
       '<input type="password" id="tokenInput2" placeholder="ghp_… / github_pat_…" value="' + esc(token) + '">' +
       '<div class="btn-row"><button class="btn ghost sm" id="saveTokenBtn">保存 Token</button>' +
@@ -596,7 +612,7 @@
     if (sport === 'football') {
       return [['0:0', 0, 0], ['1:0', 1, 0], ['2:0', 2, 0], ['2:1', 2, 1], ['3:0', 3, 0], ['3:2', 3, 2], ['4:2', 4, 2], ['5:3', 5, 3]];
     }
-    return [['10:8', 10, 8], ['15:12', 15, 12], ['20:15', 20, 15], ['25:20', 25, 20], ['30:22', 30, 22], ['40:35', 40, 35], ['0:0', 0, 0]];
+    return [['10:8', 10, 8], ['15:12', 15, 12], ['20:15', 20, 15], ['25:20', 25, 20], ['30:22', 30, 22], ['40:35', 40, 35]];
   }
 
   /* ---------- 比赛详情弹层 ---------- */
@@ -807,6 +823,10 @@
     var m = findMatch(id);
     var sa = parseInt($('#scoreA').textContent, 10) || 0;
     var sb = parseInt($('#scoreB').textContent, 10) || 0;
+    if (m.sport === 'basketball' && sa === sb) {
+      toast('篮球不设平局，请录入加时后的最终比分。');
+      return;
+    }
     m.scoreA = sa; m.scoreB = sb; m.status = 'finished';
     m.attA = { count: $('#attA').value === '' ? null : Number($('#attA').value), names: $('#namesA').value.trim() };
     m.attB = { count: $('#attB').value === '' ? null : Number($('#attB').value), names: $('#namesB').value.trim() };
@@ -894,12 +914,10 @@
     // 全角数字/空格容错
     code = code.replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 65248); }).replace(/\s+/g, '');
     var tk = ($('#tokenInput').value || '').trim();
-    if (code !== String(CFG.adminCode)) { toast('口令不对（默认 2026）'); return; }
+    if (code !== String(CFG.adminCode)) { toast('口令不对'); return; }
     if (tk) { token = tk; localStorage.setItem(TOKEN_KEY, tk); }
     isAdmin = true;
     localStorage.setItem(UNLOCK_KEY, '1');
-    var u = new URLSearchParams(location.search).get('token');
-    if (u) { token = token || u; localStorage.setItem(TOKEN_KEY, token); history.replaceState(null, '', location.pathname); }
     render();
     toast('已进入录入模式');
   }
@@ -975,7 +993,7 @@
       '<div class="sheet-body"><div class="qr-box"><div id="qr"></div>' +
       '<div class="qr-url">' + esc(url) + '</div></div>' +
       '<div class="divider"></div>' +
-      '<div class="hint">把这个二维码打印贴在公告栏或发到班级群，扫码即可查看赛程、比分、积分榜。其他裁判设备扫码后，用链接加 <code>?token=你的Token</code> 打开即可录入。</div>' +
+      '<div class="hint">把这个二维码打印贴在公告栏或发到班级群，扫码即可查看赛程、比分、积分榜。裁判请在自己的设备中打开「录入」，手工输入管理口令和 Token；不要把 Token 放进链接或二维码。</div>' +
       '<button class="btn ghost" id="copyLink" style="margin-top:10px">复制链接</button></div>';
     showSheet(html);
     setTimeout(function () {
@@ -999,9 +1017,6 @@
   }
 
   /* ---------- 启动 ---------- */
-  var urlToken = new URLSearchParams(location.search).get('token');
-  if (urlToken && !token) { token = urlToken; localStorage.setItem(TOKEN_KEY, token); }
-
   /* 启动：先本地秒开，再后台刷新 */
   (async function boot() {
     sync('加载中…');

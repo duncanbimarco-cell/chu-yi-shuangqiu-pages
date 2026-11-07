@@ -2,10 +2,10 @@
 
 初一年级班级球类联赛的赛程、比分、积分、考勤系统。**纯静态站点 + GitHub 仓库当数据库**，无服务器、无数据库、无构建步骤。
 
-- 仓库：`duncanbimarco-cell/ball-league`（分支 `main`）
-- 线上：https://duncanbimarco-cell.github.io/ball-league/
-- 只读入口：https://duncanbimarco-cell.github.io/ball-league/?readonly=1
-- 备用镜像：https://cdn.jsdelivr.net/gh/duncanbimarco-cell/ball-league@main/index.html?readonly=1
+- 仓库：`duncanbimarco-cell/chu-yi-shuangqiu-pages`（分支 `main`）
+- 线上：https://duncanbimarco-cell.github.io/chu-yi-shuangqiu-pages/
+- 只读入口：https://duncanbimarco-cell.github.io/chu-yi-shuangqiu-pages/?readonly=1
+- 备用镜像：https://cdn.jsdelivr.net/gh/duncanbimarco-cell/chu-yi-shuangqiu-pages@main/index.html?readonly=1
 
 ## 一、技术栈与文件
 
@@ -29,7 +29,7 @@ README.md       面向使用者的说明
 - 第一节：单数组班（1/3/5/7/9/11/13/15）足球，双数组班（2/4/6/8/10/12/14/16）篮球
 - 第二节：轮换 —— 单数组班篮球，双数组班足球
 - 场地轮转：足球 `["1/5号场地","2/6号场地","3/7号场地","4/8号场地"]`、篮球 `["5/1号场地"…"8/4号场地"]`，第 r 轮第 i 场取 `venue[(i + r - 1) % 4]`
-- 积分：胜 3 / 平 1 / 负 0（`config.points` 可改），排序：积分 → 净胜 → 进球 → 班号
+- 足球积分：胜 3 / 平 1 / 负 0；篮球积分：胜 3 / 负 1、无平局。排序：积分 → 净胜 → 得分 → 班号
 - **积分榜按单/双数组班分开排名**，两组之间不交叉比赛，不要合并成一个榜
 - 原表存在重复对阵的可能，改赛程前先和负责人确认
 
@@ -79,7 +79,7 @@ README.md       面向使用者的说明
 
 **照片**：前端 canvas 压缩（最长边 1100px，JPEG 0.62）→ `PUT photos/{id}-{时间戳}.jpg` → 存 raw URL 到 `photos[]`。
 
-**权限模型**：查看公开无鉴权；录入靠 `config.adminCode`（默认 `2026`，纯前端校验，只防误触）。Token 绝不写进代码/仓库。
+**权限模型**：查看公开无鉴权；录入靠 `config.adminCode`（纯前端校验，只防误触）。Token 绝不写进代码/仓库/链接/二维码。
 
 **只读模式**：URL 带 `?readonly=1` 时强制 `isAdmin = false` 并隐藏「录入」页签。
 
