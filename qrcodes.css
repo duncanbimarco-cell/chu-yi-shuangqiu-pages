@@ -1,0 +1,94 @@
+:root {
+  --navy: #082c66;
+  --blue: #1268c6;
+  --blue-soft: #eef6ff;
+  --ink: #14243b;
+  --muted: #687b93;
+  --line: #d7e5f6;
+  --card: #ffffff;
+  --red: #ab1520;
+}
+* { box-sizing: border-box; }
+html { background: #edf4fc; }
+body {
+  margin: 0; color: var(--ink); background:
+    radial-gradient(circle at 0 0, rgba(185, 219, 255, .62), transparent 30rem),
+    linear-gradient(180deg, #eef5fd 0, #f8fbff 40rem, #eef5fd 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+button, a { font: inherit; }
+.page-shell { width: min(1100px, 100%); margin: 0 auto; padding: 22px 16px 40px; }
+.page-hero {
+  margin-bottom: 16px; padding: 20px; overflow: hidden; border-radius: 26px; color: #fff;
+  background:
+    radial-gradient(circle at 94% 0, rgba(185, 236, 255, .9) 0, rgba(185, 236, 255, .9) 5%, transparent 5.2%),
+    radial-gradient(circle at 88% 72%, rgba(231, 112, 39, .5) 0, rgba(231, 112, 39, .5) 6%, transparent 6.2%),
+    linear-gradient(130deg, #071e50, #0c55ba 68%, #0b72c9);
+  box-shadow: 0 18px 36px rgba(11, 76, 176, .22);
+}
+.school-brand { display: flex; align-items: center; gap: 13px; }
+.school-brand img { display: block; width: 58px; height: 58px; padding: 3px; border-radius: 18px; background: #fff; object-fit: cover; box-shadow: 0 7px 16px rgba(0,0,0,.2); }
+.school-brand span { display: block; color: rgba(210, 241, 255, .92); font-size: 11px; font-weight: 800; letter-spacing: .8px; }
+.school-brand h1 { margin: 2px 0 0; color: #fff; font-size: clamp(24px, 6vw, 34px); line-height: 1.1; }
+.page-hero > p { margin: 14px 0 0 71px; color: #bcecff; font-size: 14px; font-weight: 800; letter-spacing: .3px; }
+.hero-actions { display: flex; gap: 9px; margin-top: 17px; padding-top: 13px; border-top: 1px solid rgba(255,255,255,.18); }
+.back-link, .print-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 37px; padding: 8px 11px; border: 1px solid rgba(255,255,255,.27); border-radius: 11px; color: #fff; background: rgba(255,255,255,.12); font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer; }
+.print-btn { margin-left: auto; color: var(--navy); background: #fff; border-color: #fff; }
+.intro-card { margin-bottom: 24px; padding: 14px 16px; border: 1px solid #d5e5fa; border-radius: 18px; background: rgba(255,255,255,.9); box-shadow: 0 7px 18px rgba(25, 89, 179, .06); }
+.intro-card strong { color: var(--navy); font-size: 14px; }
+.intro-card p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.section-title { margin: 22px 3px 10px; }
+.section-title span { display: block; color: var(--blue); font-size: 10px; font-weight: 900; letter-spacing: 1.1px; }
+.section-title h2 { margin: 2px 0 0; font-size: 21px; line-height: 1.2; }
+.featured-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.class-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.qr-card { display: flex; flex-direction: column; min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: 0 9px 22px rgba(25, 89, 179, .08); }
+.qr-card.featured { padding: 18px; }
+.qr-card.admin { border-color: #edc1c3; background: linear-gradient(145deg, #fff, #fff8f8); }
+.qr-card.public { border-color: #b9d8f7; background: linear-gradient(145deg, #fff, #f3f9ff); }
+.qr-type { display: inline-block; width: fit-content; padding: 3px 7px; border-radius: 999px; color: var(--blue); background: #e6f2ff; font-size: 10px; font-weight: 900; }
+.admin .qr-type { color: var(--red); background: #fdebec; }
+.qr-card h3 { margin: 7px 0 3px; font-size: 16px; line-height: 1.25; }
+.qr-card p { min-height: 34px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.qr-canvas { display: grid; min-height: 166px; place-items: center; margin: 12px 0 10px; border: 1px solid #e4edf8; border-radius: 15px; background: #fff; }
+.featured .qr-canvas { min-height: 220px; }
+.qr-canvas canvas, .qr-canvas img { display: block; width: min(100%, 210px); height: auto; image-rendering: pixelated; }
+.class-grid .qr-canvas canvas, .class-grid .qr-canvas img { width: min(100%, 156px); }
+.qr-actions { display: flex; gap: 7px; margin-top: auto; }
+.qr-actions button, .qr-actions a { flex: 1; min-height: 34px; padding: 7px 5px; border: 1px solid #c9dcf5; border-radius: 10px; color: var(--navy); background: #f8fbff; font-size: 11px; font-weight: 800; text-align: center; text-decoration: none; cursor: pointer; }
+.qr-actions a { display: inline-flex; align-items: center; justify-content: center; }
+.qr-actions button:active, .print-btn:active { transform: scale(.98); }
+.card-url { overflow: hidden; margin-top: 8px; color: #8293a8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+footer { margin-top: 28px; color: var(--muted); font-size: 11px; text-align: center; }
+@media (max-width: 680px) {
+  .page-shell { padding: 14px 12px 28px; }
+  .page-hero { padding: 17px; border-radius: 22px; }
+  .class-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .qr-card { padding: 12px; border-radius: 17px; }
+  .class-grid .qr-canvas { min-height: 158px; margin: 10px 0 8px; }
+  .qr-card h3 { font-size: 14px; }
+  .qr-card p { min-height: 31px; font-size: 10px; }
+}
+@media (max-width: 390px) {
+  .featured-grid { grid-template-columns: 1fr; }
+  .hero-actions { flex-wrap: wrap; }
+  .print-btn { margin-left: 0; }
+}
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body { background: #fff; }
+  .page-shell { width: 100%; padding: 0; }
+  .page-hero { margin-bottom: 6mm; padding: 10mm; box-shadow: none; }
+  .intro-card { margin-bottom: 4mm; box-shadow: none; }
+  .hero-actions, .qr-actions { display: none; }
+  .section-title { margin: 6mm 0 3mm; }
+  .featured-grid { grid-template-columns: repeat(2, 1fr); gap: 4mm; }
+  .class-grid { grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+  .qr-card { break-inside: avoid; padding: 4mm; border-radius: 4mm; box-shadow: none; }
+  .featured .qr-canvas, .qr-canvas { min-height: auto; margin: 3mm 0; border: 0; }
+  .featured .qr-canvas canvas, .featured .qr-canvas img { width: 38mm; }
+  .class-grid .qr-canvas canvas, .class-grid .qr-canvas img { width: 30mm; }
+  .qr-card p { min-height: 0; }
+  .card-url { display: none; }
+  footer { margin-top: 6mm; }
+}

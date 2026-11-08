@@ -727,6 +727,7 @@
       '<button class="btn ghost" id="qrBtn">📱 生成访问二维码</button>' +
       '<div class="btn-row"><button class="btn ghost sm" id="refreshBtn">重新拉取数据</button>' +
       '<button class="btn danger sm" id="lockBtn">退出录入</button></div>' +
+      '<a class="btn ghost sm" style="margin-top:9px;text-align:center;text-decoration:none" href="qrcodes.html" target="_blank" rel="noopener">🗂️ 打开全部班级二维码发放页</a>' +
       '<div class="divider"></div>' +
       '<div class="hint">当前仓库：<code>' + esc(OWNER + '/' + REPO) + '</code>　口令在 <code>config.js</code> 里改。<br>所有人打开网页都能看赛程和积分；只有输入口令的这台设备能改数据。</div>' +
       '</div></div>';

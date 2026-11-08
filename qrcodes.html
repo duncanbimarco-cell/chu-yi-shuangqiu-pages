@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#082c66">
+<title>北大附中初一双球联赛 · 二维码发放页</title>
+<link rel="stylesheet" href="qrcodes.css?v=20261108a">
+</head>
+<body>
+<main class="page-shell">
+  <header class="page-hero">
+    <div class="school-brand">
+      <img src="assets/bdfz-school-seal.jpg" alt="北京大学附属中学校徽">
+      <div><span>北京大学附属中学 · 2026 秋季</span><h1>初一双球联赛</h1></div>
+    </div>
+    <p>完全人格，首在体育</p>
+    <div class="hero-actions">
+      <a class="back-link" href="./?readonly=1">← 返回赛事主页</a>
+      <button class="print-btn" id="printPage">🖨️ 打印 / 存为 PDF</button>
+    </div>
+  </header>
+
+  <section class="intro-card">
+    <strong>二维码发放说明</strong>
+    <p>通用码适合公告栏和年级群；班级专属码发给对应班级；管理员码只给裁判或组委会。管理员码不含口令和 Token。</p>
+  </section>
+
+  <section aria-labelledby="featuredTitle">
+    <div class="section-title"><span>重点入口</span><h2 id="featuredTitle">公开与管理员二维码</h2></div>
+    <div class="featured-grid" id="featuredGrid"></div>
+  </section>
+
+  <section aria-labelledby="classesTitle">
+    <div class="section-title"><span>CLASS QR</span><h2 id="classesTitle">16 个班专属赛程二维码</h2></div>
+    <div class="class-grid" id="classGrid"></div>
+  </section>
+
+  <footer>北大附中初一双球联赛 · 扫码查看赛程、比分、积分榜与考勤</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="qrcodes.js?v=20261108a"></script>
+</body>
+</html>
