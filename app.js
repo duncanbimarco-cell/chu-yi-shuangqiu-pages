@@ -47,6 +47,9 @@
   var DATA = null;          // 全量数据
   var VIEW = 'schedule';
   var SPORT_FILTER = 'all';
+  var classFromURL = parseInt(new URLSearchParams(location.search).get('class') || '', 10);
+  // 班级筛选会同步到链接里，方便直接分享给某个班，但不影响通用二维码。
+  var CLASS_FILTER = classFromURL >= 1 && classFromURL <= 16 ? classFromURL : 0;
   var token = localStorage.getItem(TOKEN_KEY) || '';
   var isAdmin = localStorage.getItem(UNLOCK_KEY) === '1';
   // 只读模式：链接带 ?readonly=1 时，隐藏录入入口、强制为观众
@@ -325,6 +328,54 @@
     var list = (DATA.sessions || []).filter(function (x) { return x.session === s; });
     return list[0] || { session: s, label: s === 1 ? '第一节' : '第二节', desc: '' };
   }
+  function shortDate(dateStr) {
+    if (!dateStr) return '日期待定';
+    var d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return dateStr;
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+  function classNumbers() {
+    var classes = {};
+    (DATA.matches || []).forEach(function (m) { classes[m.a] = true; classes[m.b] = true; });
+    return Object.keys(classes).map(Number).sort(function (a, b) { return a - b; });
+  }
+  function matchesForClass(cls) {
+    return (DATA.matches || []).filter(function (m) { return m.a === cls || m.b === cls; })
+      .sort(function (a, b) { return a.round - b.round || (a.session || 1) - (b.session || 1); });
+  }
+  function nextRoundInfo() {
+    var byRound = {};
+    (DATA.matches || []).forEach(function (m) {
+      byRound[m.round] = byRound[m.round] || [];
+      byRound[m.round].push(m);
+    });
+    var rounds = Object.keys(byRound).map(Number).sort(function (a, b) { return a - b; });
+    if (!rounds.length) return null;
+    var r = rounds.filter(function (n) {
+      return byRound[n].some(function (m) { return m.status !== 'finished'; });
+    })[0] || rounds[rounds.length - 1];
+    var list = byRound[r];
+    return {
+      round: r,
+      meta: roundMeta(r),
+      total: list.length,
+      finished: list.filter(function (m) { return m.status === 'finished'; }).length
+    };
+  }
+  function publicShareURL() {
+    var url = new URL(location.href);
+    url.search = '';
+    url.searchParams.set('readonly', '1');
+    if (CLASS_FILTER) url.searchParams.set('class', String(CLASS_FILTER));
+    return url.toString();
+  }
+  function saveClassFilter(cls) {
+    CLASS_FILTER = cls;
+    var url = new URL(location.href);
+    if (CLASS_FILTER) url.searchParams.set('class', String(CLASS_FILTER));
+    else url.searchParams.delete('class');
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  }
 
   function leagueStats() {
     var matches = DATA.matches || [], teams = {}, rounds = {};
@@ -339,6 +390,41 @@
       rounds: Object.keys(rounds).length,
       finished: finished
     };
+  }
+
+  function matchdayHTML() {
+    var next = nextRoundInfo();
+    if (!next) return '';
+    var meta = next.meta || {};
+    var dateLabel = meta.date ? shortDate(meta.date) + ' · ' + weekdayOf(meta.date) : '日期待定';
+    var sessionOne = sessionMeta(1);
+    return '<section class="matchday-card" aria-label="下一比赛日">' +
+      '<div class="matchday-date"><span>下一比赛日</span><strong>' + esc(dateLabel) + '</strong></div>' +
+      '<div class="matchday-copy"><span class="matchday-kicker">ROUND ' + String(next.round).padStart(2, '0') + '</span>' +
+      '<h3>' + esc(meta.label || ('第' + next.round + '轮')) + ' · ' + next.finished + '/' + next.total + ' 场已结束</h3>' +
+      '<p>' + esc(sessionOne.desc || '两节比赛，足球和篮球轮换进行') + '</p></div>' +
+      '<button class="round-jump" data-jump-round="' + next.round + '">查看<br>本轮</button>' +
+      '</section>';
+  }
+
+  function classFocusHTML() {
+    var classes = classNumbers();
+    var focusMatches = CLASS_FILTER ? matchesForClass(CLASS_FILTER) : [];
+    var finished = focusMatches.filter(function (m) { return m.status === 'finished'; }).length;
+    var next = focusMatches.filter(function (m) { return m.status !== 'finished'; })[0];
+    var title = CLASS_FILTER ? teamName(CLASS_FILTER) + '专属赛程' : '查找本班赛程';
+    var detail = CLASS_FILTER
+      ? '共 ' + focusMatches.length + ' 场 · 已结束 ' + finished + ' 场' +
+        (next ? ' · 下一场：第' + next.round + '轮' + sessionMeta(next.session || 1).label + ' ' + sportName(next.sport) : ' · 全部比赛已结束')
+      : '选择班级后，只看本班比赛；分享链接也会自动锁定这个班级。';
+    var options = '<option value="0">查看全部班级</option>' + classes.map(function (n) {
+      return '<option value="' + n + '"' + (CLASS_FILTER === n ? ' selected' : '') + '>' + teamName(n) + '</option>';
+    }).join('');
+    return '<section class="class-focus" aria-label="班级专属赛程">' +
+      '<div class="focus-icon" aria-hidden="true">⌁</div>' +
+      '<div class="focus-copy"><span class="focus-kicker">MY CLASS</span><h3>' + esc(title) + '</h3><p>' + esc(detail) + '</p></div>' +
+      '<label class="class-select"><span>选择班级</span><select id="classFilter" aria-label="选择要查看的班级">' + options + '</select></label>' +
+      '</section>';
   }
 
   /* ---------- 积分计算 ---------- */
@@ -381,6 +467,7 @@
     var rounds = {};
     (DATA.matches || []).forEach(function (m) {
       if (SPORT_FILTER !== 'all' && m.sport !== SPORT_FILTER) return;
+      if (CLASS_FILTER && m.a !== CLASS_FILTER && m.b !== CLASS_FILTER) return;
       rounds[m.round] = rounds[m.round] || {};
       var s = m.session || 1;
       (rounds[m.round][s] = rounds[m.round][s] || []).push(m);
@@ -389,17 +476,29 @@
     if (!keys.length) return '<div class="card"><div class="empty">暂无赛程</div></div>';
 
     var stats = leagueStats();
+    var brand = CFG.brand || {};
+    var focusMatches = CLASS_FILTER ? matchesForClass(CLASS_FILTER) : [];
+    var focusFinished = focusMatches.filter(function (m) { return m.status === 'finished'; }).length;
+    var heroTitle = CLASS_FILTER ? teamName(CLASS_FILTER) : (brand.heroTitle || '双球联赛');
+    var heroAccent = CLASS_FILTER ? '专属赛程' : (brand.heroAccent || '开赛');
+    var heroStats = CLASS_FILTER
+      ? '<div><strong>' + focusMatches.length + '</strong><span>本班场次</span></div>' +
+        '<div><strong>' + focusMatches.filter(function (m) { return m.sport === 'football'; }).length + '</strong><span>足球场次</span></div>' +
+        '<div><strong>' + focusMatches.filter(function (m) { return m.sport === 'basketball'; }).length + '</strong><span>篮球场次</span></div>'
+      : '<div><strong>' + stats.teams + '</strong><span>参赛班级</span></div>' +
+        '<div><strong>' + stats.matches + '</strong><span>全部对阵</span></div>' +
+        '<div><strong>' + stats.rounds + '</strong><span>比赛轮次</span></div>';
     var html = '<section class="league-hero">' +
-      '<div class="hero-copy"><span class="hero-kicker">2026 · CLASS LEAGUE</span>' +
-      '<h2>双球联赛 <em>开赛</em></h2>' +
-      '<p>16 个班 · 足球与篮球 · 一起为班级而战</p></div>' +
+      '<div class="hero-copy"><span class="hero-kicker">' + esc(brand.heroKicker || '2026 · CLASS LEAGUE') + '</span>' +
+      '<h2>' + esc(heroTitle) + ' <em>' + esc(heroAccent) + '</em></h2>' +
+      '<p>' + esc(brand.motto || '16 个班 · 足球与篮球 · 一起为班级而战') + '</p></div>' +
       '<div class="hero-balls" aria-hidden="true"><span>⚽</span><span>🏀</span></div>' +
-      '<div class="hero-stats">' +
-      '<div><strong>' + stats.teams + '</strong><span>参赛班级</span></div>' +
-      '<div><strong>' + stats.matches + '</strong><span>全部对阵</span></div>' +
-      '<div><strong>' + stats.rounds + '</strong><span>比赛轮次</span></div>' +
-      '</div></section>' +
-      '<div class="schedule-status"><span class="pulse-dot"></span>赛季进度 <strong>' + stats.finished + ' / ' + stats.matches + '</strong> 场已结束</div>' +
+      '<div class="hero-stats">' + heroStats + '</div></section>' +
+      matchdayHTML() +
+      classFocusHTML() +
+      '<div class="schedule-status"><span class="pulse-dot"></span>' +
+      (CLASS_FILTER ? esc(teamName(CLASS_FILTER)) + '进度 <strong>' + focusFinished + ' / ' + focusMatches.length + '</strong> 场已结束'
+        : '赛季进度 <strong>' + stats.finished + ' / ' + stats.matches + '</strong> 场已结束') + '</div>' +
       '<div class="seg">' +
       '<button data-sport="all" class="' + (SPORT_FILTER === 'all' ? 'on' : '') + '">全部</button>' +
       '<button data-sport="football" class="' + (SPORT_FILTER === 'football' ? 'on' : '') + '">⚽ 足球</button>' +
@@ -410,7 +509,7 @@
       var meta = roundMeta(r);
       var thisWeek = isThisWeek(meta.date);
       var photos = (DATA.schedulePhotos || []).filter(function (p) { return p.round === r; });
-      html += '<div class="round-block">';
+      html += '<div class="round-block" id="round-' + r + '">';
       html += '<div class="round-title"><span class="round-index">' + String(r).padStart(2, '0') + '</span><span class="dot"></span><span class="round-name">' + esc(meta.label || ('第' + r + '轮')) + '</span>' +
         (meta.date ? ' · ' + esc(meta.date) + ' ' + weekdayOf(meta.date) : '') +
         (thisWeek ? '<span class="week badge done">本周</span>' : '') + '</div>';
@@ -731,6 +830,8 @@
   function render() {
     if (!DATA) return;
     $('#appTitle').textContent = DATA.title || CFG.title || '班级球类联赛';
+    var brandKicker = $('#brandKicker');
+    if (brandKicker) brandKicker.textContent = (CFG.brand && CFG.brand.kicker) || '2026 CAMPUS LEAGUE';
     // 只读模式：隐藏「录入」页签，且不允许停留在该页
     var adminTab = document.querySelector('.tab[data-view="admin"]');
     if (adminTab) adminTab.style.display = READONLY ? 'none' : '';
@@ -756,6 +857,13 @@
     }
     var seg = e.target.closest('.seg button');
     if (seg) { SPORT_FILTER = seg.dataset.sport; render(); return; }
+
+    var jump = e.target.closest('[data-jump-round]');
+    if (jump) {
+      var target = document.getElementById('round-' + jump.dataset.jumpRound);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
 
     var m = e.target.closest('.match, .att-item');
     if (m && m.dataset.id) { openMatch(m.dataset.id); return; }
@@ -810,6 +918,12 @@
   });
 
   document.addEventListener('change', function (e) {
+    if (e.target.id === 'classFilter') {
+      var cls = parseInt(e.target.value || '0', 10) || 0;
+      saveClassFilter(cls);
+      render();
+      return;
+    }
     if (e.target.id === 'photoInput' && e.target.files[0]) {
       var f = e.target.files[0];
       compressImage(f, 1100, 0.62).then(function (dataUrl) {
@@ -1016,12 +1130,14 @@
   }
 
   function showQR() {
-    var url = location.origin + location.pathname + (location.pathname === '/' ? '' : '');
+    var url = publicShareURL();
     var html = '<div class="sheet-hd"><h3>扫码访问</h3><button class="close" data-close>×</button></div>' +
       '<div class="sheet-body"><div class="qr-box"><div id="qr"></div>' +
       '<div class="qr-url">' + esc(url) + '</div></div>' +
       '<div class="divider"></div>' +
-      '<div class="hint">把这个二维码打印贴在公告栏或发到班级群，扫码即可查看赛程、比分、积分榜。裁判请在自己的设备中打开「录入」，手工输入管理口令和 Token；不要把 Token 放进链接或二维码。</div>' +
+      '<div class="hint">把这个二维码打印贴在公告栏或发到班级群，扫码即可查看赛程、比分、积分榜。' +
+      (CLASS_FILTER ? '当前二维码只显示' + esc(teamName(CLASS_FILTER)) + '赛程。' : '') +
+      '裁判请在自己的设备中打开「录入」，手工输入管理口令和 Token；不要把 Token 放进链接或二维码。</div>' +
       '<button class="btn ghost" id="copyLink" style="margin-top:10px">复制链接</button></div>';
     showSheet(html);
     setTimeout(function () {

@@ -116,18 +116,45 @@ main { max-width: 800px; margin: 0 auto; padding: 18px 14px 36px; }
 .hero-stats div { padding: 8px 9px; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: rgba(2, 30, 89, .25); backdrop-filter: blur(8px); }
 .hero-stats strong { display: block; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-stats span { display: block; margin-top: 3px; color: rgba(255,255,255,.7); font-size: 10px; }
+.matchday-card {
+  display: grid; grid-template-columns: 67px minmax(0, 1fr) 54px; align-items: center; gap: 10px;
+  margin-bottom: 10px; padding: 10px; border: 1px solid #d6e5fa; border-radius: 18px;
+  background: linear-gradient(112deg, #ffffff, #edf6ff); box-shadow: 0 7px 18px rgba(25, 89, 179, .07);
+}
+.matchday-date { padding: 8px 5px; border-radius: 13px; color: #fff; background: linear-gradient(145deg, #0b4ca5, #1478d0); text-align: center; }
+.matchday-date span, .matchday-kicker, .focus-kicker { display: block; font-size: 9px; font-weight: 800; letter-spacing: .8px; }
+.matchday-date span { color: rgba(255,255,255,.78); }
+.matchday-date strong { display: block; margin-top: 2px; font-size: 12px; line-height: 1.25; }
+.matchday-copy { min-width: 0; }
+.matchday-kicker { color: var(--primary); }
+.matchday-copy h3 { overflow: hidden; margin: 1px 0 2px; color: var(--text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.matchday-copy p { overflow: hidden; margin: 0; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.round-jump { align-self: stretch; padding: 5px 3px; border: 1px solid #bcd7f7; border-radius: 12px; color: var(--forest); background: rgba(255,255,255,.8); font-size: 11px; font-weight: 800; line-height: 1.25; cursor: pointer; }
+.round-jump:active { background: var(--primary-soft); transform: scale(.98); }
+.class-focus {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 0 10px; align-items: start;
+  margin-bottom: 12px; padding: 14px; border: 1px solid #d5e5fa; border-radius: 18px;
+  background: rgba(255,255,255,.88); box-shadow: 0 7px 18px rgba(25, 89, 179, .06);
+}
+.focus-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 12px; color: #fff; background: linear-gradient(145deg, #1769c8, #44a6e9); font-size: 21px; font-weight: 900; }
+.focus-copy { min-width: 0; }
+.focus-kicker { color: var(--primary); }
+.focus-copy h3 { margin: 1px 0 2px; color: var(--text); font-size: 15px; line-height: 1.25; }
+.focus-copy p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.class-select { display: grid; grid-column: 1 / -1; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 8px; margin-top: 11px; color: var(--muted); font-size: 11px; font-weight: 800; }
+.class-select select { min-width: 0; padding: 8px 10px; border-color: #c9dcf5; border-radius: 10px; color: var(--forest); background: #f8fbff; font-size: 13px; font-weight: 800; }
 .schedule-status { display: flex; align-items: center; gap: 7px; margin: 0 3px 12px; color: var(--muted); font-size: 12px; }
 .schedule-status strong { color: var(--forest); font-variant-numeric: tabular-nums; }
 .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--football); box-shadow: 0 0 0 4px rgba(12, 155, 98, .14); }
 
 /* 通用卡片、标题和筛选 */
-.card { overflow: hidden; margin-bottom: 12px; border: 1px solid rgba(195, 215, 203, .76); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
-.card-hd { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 12px 15px; border-bottom: 1px solid var(--line); background: linear-gradient(110deg, #fff, #f6faf7); }
+.card { overflow: hidden; margin-bottom: 12px; border: 1px solid rgba(199, 215, 237, .9); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.card-hd { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 12px 15px; border-bottom: 1px solid var(--line); background: linear-gradient(110deg, #fff, #f5f9ff); }
 .card-hd h2 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .1px; }
 .card-hd .sub { margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
-.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 17px; padding: 5px; border: 1px solid rgba(195, 215, 203, .85); border-radius: 16px; background: rgba(255,255,255,.88); box-shadow: 0 5px 15px rgba(15, 76, 53, .06); }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 17px; padding: 5px; border: 1px solid rgba(199, 215, 237, .95); border-radius: 16px; background: rgba(255,255,255,.88); box-shadow: 0 5px 15px rgba(25, 89, 179, .06); }
 .seg button { min-height: 37px; padding: 7px 4px; border: 1px solid transparent; border-radius: 11px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 700; cursor: pointer; }
-.seg button.on { border-color: var(--primary); color: #fff; background: var(--primary); box-shadow: 0 4px 8px rgba(12, 104, 77, .19); }
+.seg button.on { border-color: var(--primary); color: #fff; background: var(--primary); box-shadow: 0 4px 8px rgba(23, 103, 199, .22); }
 .seg button.on[data-sport="football"] { border-color: var(--football); background: var(--football); }
 .seg button.on[data-sport="basketball"] { border-color: var(--basketball); background: var(--basketball); }
 
@@ -146,8 +173,8 @@ main { max-width: 800px; margin: 0 auto; padding: 18px 14px 36px; }
 .match::before { position: absolute; top: 14px; bottom: 14px; left: 0; width: 4px; border-radius: 0 5px 5px 0; content: ""; background: var(--football); }
 .match.match-basketball::before { background: var(--basketball); }
 .match:last-child { border-bottom: 0; }
-.match:hover { background: #fbfdfb; }
-.match:active { background: #f0f8f3; transform: scale(.995); }
+.match:hover { background: #f8fbff; }
+.match:active { background: #eef6ff; transform: scale(.995); }
 .match .tag { flex: none; min-width: 42px; padding: 4px 6px; border-radius: 8px; text-align: center; font-size: 10px; font-weight: 800; letter-spacing: .2px; }
 .tag.football { color: var(--football); background: var(--football-soft); }
 .tag.basketball { color: var(--basketball); background: var(--basketball-soft); }
@@ -203,10 +230,10 @@ tr.rank3 .rk span { color: #7a4b23; background: #f5d3ad; }
 .att-item .d { margin-top: 3px; color: var(--muted); font-size: 12px; }
 
 /* 底部导航 */
-.tabbar { position: fixed; z-index: 40; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; display: flex; max-width: 780px; min-height: 65px; margin: 0 auto; padding: 5px; border: 1px solid rgba(201, 216, 207, .96); border-radius: 21px; background: rgba(255,255,255,.93); box-shadow: 0 12px 30px rgba(8, 52, 39, .18); backdrop-filter: saturate(180%) blur(16px); }
+.tabbar { position: fixed; z-index: 40; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; display: flex; max-width: 780px; min-height: 65px; margin: 0 auto; padding: 5px; border: 1px solid rgba(198, 214, 237, .96); border-radius: 21px; background: rgba(255,255,255,.93); box-shadow: 0 12px 30px rgba(19, 63, 128, .18); backdrop-filter: saturate(180%) blur(16px); }
 .tabbar .tab { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 0; padding: 6px 2px; border: 0; border-radius: 15px; color: var(--muted); background: transparent; font-size: 10px; font-weight: 700; cursor: pointer; transition: color .15s ease, background .15s ease; }
 .tabbar .tab span { font-size: 18px; line-height: 1.05; filter: grayscale(.12); }
-.tabbar .tab.active { color: #fff; background: var(--forest); box-shadow: 0 5px 10px rgba(14, 90, 69, .22); }
+.tabbar .tab.active { color: #fff; background: var(--forest); box-shadow: 0 5px 10px rgba(18, 75, 154, .24); }
 .tabbar .tab.active span { filter: none; }
 
 /* 弹层与录入 */
@@ -234,7 +261,7 @@ textarea { min-height: 68px; resize: vertical; }
 .vs { color: var(--muted); font-size: 13px; font-weight: 900; }
 .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .quick button { padding: 6px 10px; border: 1px solid #d8e4dc; border-radius: 9px; color: var(--forest); background: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
-.btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 13px; color: #fff; background: linear-gradient(120deg, var(--forest), #0b7d5a); box-shadow: 0 7px 12px rgba(10, 106, 75, .2); font-size: 15px; font-weight: 800; cursor: pointer; }
+.btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 13px; color: #fff; background: linear-gradient(120deg, var(--forest), #0d76cf); box-shadow: 0 7px 12px rgba(23, 103, 199, .2); font-size: 15px; font-weight: 800; cursor: pointer; }
 .btn:active { transform: translateY(1px); opacity: .9; }
 .btn.ghost { border: 1px solid #d8e4dc; color: var(--forest); background: #fff; box-shadow: none; font-weight: 800; }
 .btn.danger { border: 1px solid #f1c9c4; color: var(--danger); background: #fff8f7; box-shadow: none; }
