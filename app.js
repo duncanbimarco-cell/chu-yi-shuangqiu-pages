@@ -829,7 +829,7 @@
   /* ---------- 事件 ---------- */
   function render() {
     if (!DATA) return;
-    $('#appTitle').textContent = DATA.title || CFG.title || '班级球类联赛';
+    $('#appTitle').textContent = CFG.title || DATA.title || '班级球类联赛';
     var brandKicker = $('#brandKicker');
     if (brandKicker) brandKicker.textContent = (CFG.brand && CFG.brand.kicker) || '2026 CAMPUS LEAGUE';
     // 只读模式：隐藏「录入」页签，且不允许停留在该页

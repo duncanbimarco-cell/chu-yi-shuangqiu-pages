@@ -16,13 +16,13 @@ window.APP_CONFIG = {
     basketball: { win: 3, draw: 0, lose: 1 }
   },
   // 联赛标题
-  title: "初一年级足球·篮球联赛",
+  title: "北大附中初一双球联赛",
   // 页面品牌文案：以后改学校名称、赛季或口号，只需要修改这里
   brand: {
-    kicker: "2026 秋季 · CLASS LEAGUE",
-    heroKicker: "初一年级 · 双球联赛",
-    heroTitle: "双球联赛",
-    heroAccent: "开赛",
-    motto: "16 个班 · 为班级而战 · 为热爱喝彩"
+    kicker: "北京大学附属中学 · 2026 秋季",
+    heroKicker: "完全人格，首在体育",
+    heroTitle: "初一双球",
+    heroAccent: "联赛",
+    motto: "北大附中初一年级 · 16 个班同场竞技"
   }
 };
