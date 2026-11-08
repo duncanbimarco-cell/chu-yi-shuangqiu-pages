@@ -326,6 +326,21 @@
     return list[0] || { session: s, label: s === 1 ? '第一节' : '第二节', desc: '' };
   }
 
+  function leagueStats() {
+    var matches = DATA.matches || [], teams = {}, rounds = {};
+    var finished = 0;
+    matches.forEach(function (m) {
+      teams[m.a] = true; teams[m.b] = true; rounds[m.round] = true;
+      if (m.status === 'finished' && m.scoreA != null && m.scoreB != null) finished++;
+    });
+    return {
+      teams: Object.keys(teams).length,
+      matches: matches.length,
+      rounds: Object.keys(rounds).length,
+      finished: finished
+    };
+  }
+
   /* ---------- 积分计算 ---------- */
   // parity: 1=单数组班, 0=双数组班, null=全部
   function standings(sport, parity) {
@@ -373,7 +388,19 @@
     var keys = Object.keys(rounds).map(Number).sort(function (a, b) { return a - b; });
     if (!keys.length) return '<div class="card"><div class="empty">暂无赛程</div></div>';
 
-    var html = '<div class="seg">' +
+    var stats = leagueStats();
+    var html = '<section class="league-hero">' +
+      '<div class="hero-copy"><span class="hero-kicker">2026 · CLASS LEAGUE</span>' +
+      '<h2>双球联赛 <em>开赛</em></h2>' +
+      '<p>16 个班 · 足球与篮球 · 一起为班级而战</p></div>' +
+      '<div class="hero-balls" aria-hidden="true"><span>⚽</span><span>🏀</span></div>' +
+      '<div class="hero-stats">' +
+      '<div><strong>' + stats.teams + '</strong><span>参赛班级</span></div>' +
+      '<div><strong>' + stats.matches + '</strong><span>全部对阵</span></div>' +
+      '<div><strong>' + stats.rounds + '</strong><span>比赛轮次</span></div>' +
+      '</div></section>' +
+      '<div class="schedule-status"><span class="pulse-dot"></span>赛季进度 <strong>' + stats.finished + ' / ' + stats.matches + '</strong> 场已结束</div>' +
+      '<div class="seg">' +
       '<button data-sport="all" class="' + (SPORT_FILTER === 'all' ? 'on' : '') + '">全部</button>' +
       '<button data-sport="football" class="' + (SPORT_FILTER === 'football' ? 'on' : '') + '">⚽ 足球</button>' +
       '<button data-sport="basketball" class="' + (SPORT_FILTER === 'basketball' ? 'on' : '') + '">🏀 篮球</button>' +
@@ -384,7 +411,7 @@
       var thisWeek = isThisWeek(meta.date);
       var photos = (DATA.schedulePhotos || []).filter(function (p) { return p.round === r; });
       html += '<div class="round-block">';
-      html += '<div class="round-title"><span class="dot"></span>' + esc(meta.label || ('第' + r + '轮')) +
+      html += '<div class="round-title"><span class="round-index">' + String(r).padStart(2, '0') + '</span><span class="dot"></span><span class="round-name">' + esc(meta.label || ('第' + r + '轮')) + '</span>' +
         (meta.date ? ' · ' + esc(meta.date) + ' ' + weekdayOf(meta.date) : '') +
         (thisWeek ? '<span class="week badge done">本周</span>' : '') + '</div>';
       photos.forEach(function (p) {
@@ -394,8 +421,7 @@
         var list = rounds[r][s];
         if (!list || !list.length) return;
         var sm = sessionMeta(s);
-        html += '<div class="round-title" style="margin:10px 2px 6px"><span class="dot" style="background:' +
-          (s === 1 ? 'var(--football)' : 'var(--basketball)') + '"></span>' +
+        html += '<div class="round-title session-title session-' + s + '"><span class="dot"></span>' +
           esc(sm.label) + '<span class="week">' + esc(sm.desc) + '</span></div>';
         html += '<div class="card">';
         list.forEach(function (m) { html += matchRowHTML(m); });
@@ -418,7 +444,7 @@
     if (m.date) meta.push('🕒' + esc(m.date));
     if (m.photos && m.photos.length) meta.push('📷' + m.photos.length);
     if (m.attA && m.attA.count) meta.push('👥' + m.attA.count + '+' + (m.attB && m.attB.count ? m.attB.count : 0));
-    return '<div class="match" data-id="' + esc(m.id) + '">' +
+    return '<div class="match match-' + m.sport + '" data-id="' + esc(m.id) + '">' +
       '<span class="tag ' + m.sport + '">' + sportName(m.sport) + '</span>' +
       '<div class="teams">' +
       '<div class="row ' + (done ? (aWin ? 'win' : (bWin ? 'lose' : '')) : '') + '"><span class="cls">' + teamName(m.a) + '</span><span class="sc">' + (done ? m.scoreA : '-') + '</span></div>' +
@@ -435,10 +461,9 @@
     var rows = standings(sport, parity);
     var unit = sport === 'football' ? '球' : '分';
     var basketball = sport === 'basketball';
-    var html = '<div class="round-title" style="margin:8px 2px 6px"><span class="dot" style="background:' +
-      (sport === 'football' ? 'var(--football)' : 'var(--basketball)') + '"></span>' + title + '</div>';
+    var html = '<div class="round-title ranking-group ranking-' + sport + '"><span class="dot"></span>' + title + '</div>';
     if (!rows.length) { return html + '<div class="card"><div class="empty">暂无数据</div></div>'; }
-    html += '<div class="card"><table><thead><tr><th class="rk"></th>' +
+    html += '<div class="card standing-card"><table><thead><tr><th class="rk"></th>' +
       '<th style="text-align:left;padding-left:12px">班级</th><th>场</th><th>胜</th>' +
       (basketball ? '<th>负</th>' : '<th>平</th><th>负</th>') +
       '<th>进' + unit + '</th><th>失' + unit + '</th><th>净</th><th>积分</th></tr></thead><tbody>';
@@ -457,9 +482,11 @@
   }
 
   function standingsHTML() {
-    var html = '<div class="hint" style="padding:0 2px 10px">两组班分别排名（单数组班和双数组班之间不交叉比赛）</div>';
+    var stats = leagueStats();
+    var html = '<section class="view-head view-head-rank"><span class="view-kicker">RANKING BOARD</span><h2>积分榜</h2>' +
+      '<p>已完成 ' + stats.finished + ' 场比赛 · 单、双数组班分别排名</p></section>';
     ['football', 'basketball'].forEach(function (sp) {
-      html += '<div class="card-hd" style="border:1px solid var(--line);border-radius:14px 14px 0 0;background:#fff">' +
+      html += '<div class="card-hd sport-board sport-board-' + sp + '">' +
         '<h2>' + (sp === 'football' ? '⚽ 足球积分榜' : '🏀 篮球积分榜') + '</h2>' +
         '<span class="sub">16 个班全部参加</span></div>';
       html += groupTable(sp, 1, '单数组班（1/3/5/7/9/11/13/15班）');
@@ -468,7 +495,7 @@
       var rule = sp === 'basketball'
         ? '胜' + P.win + '分 · 负' + P.lose + '分 · 不设平局'
         : '胜' + P.win + '分 · 平' + P.draw + '分 · 负' + P.lose + '分';
-      html += '<div class="legend" style="border:1px solid var(--line);border-top:none;border-radius:0 0 14px 14px;background:#fff">' +
+      html += '<div class="legend board-legend">' +
         rule + '；同分先比净' + (sp === 'football' ? '球' : '分') + '，再比进' + (sp === 'football' ? '球' : '分') + '</div>';
       html += '<div style="height:12px"></div>';
     });
@@ -490,7 +517,8 @@
         total += Number(att.count) || 0;
       });
     });
-    var html = '<div class="card"><div class="card-hd"><h2>考勤总览</h2></div><div class="att-sum">' +
+    var html = '<section class="view-head view-head-att"><span class="view-kicker">ATTENDANCE</span><h2>赛事考勤</h2><p>每场录入双方到场人数，自动汇总</p></section>' +
+      '<div class="card attendance-overview"><div class="card-hd"><h2>考勤总览</h2></div><div class="att-sum">' +
       '<div class="box"><div class="n">' + done + '</div><div class="l">已考勤场次</div></div>' +
       '<div class="box"><div class="n">' + total + '</div><div class="l">累计到场人次</div></div>' +
       '</div></div>';
