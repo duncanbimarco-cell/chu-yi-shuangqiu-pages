@@ -8,6 +8,10 @@ window.APP_CONFIG = {
   branch: "main",
   // 数据文件路径
   dataPath: "data/matches.json",
+  // 数据后端：'github'（默认，沿用旧方案）或 'cloudbase'（国内云数据库，根治国内访问不稳）
+  backend: "github",
+  // 腾讯云 CloudBase 环境 ID（backend='cloudbase' 时必填，部署时由我填好）
+  envId: "",
   // 组委会/裁判录入口令（改这里即可，改完重新推送一次）
   adminCode: "20261118",
   // 足球：胜3 平1 负0；篮球：胜3 负1，不设平局

@@ -9,6 +9,11 @@
   var DATA_PATH = CFG.dataPath || 'data/matches.json';
   var API = 'https://api.github.com';
   var CONFIGURED = OWNER && OWNER.indexOf('YOUR_') !== 0;
+  // 是否启用腾讯云 CloudBase 云数据库（根治国内访问不稳、实现多设备实时同步）
+  var USE_CB = CFG.backend === 'cloudbase' && !!CFG.envId;
+  var CACHE_KEY = 'bl_cache_' + (OWNER || 'x') + '_' + (REPO || 'x');
+  function saveCache(d) { try { if (d && d.matches) localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch (e) { } }
+  function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { return null; } }
 
   var TOKEN_KEY = 'bl_token_' + OWNER + '_' + REPO;
   var UNLOCK_KEY = 'bl_admin_' + OWNER + '_' + REPO;
@@ -145,6 +150,25 @@
     return false;
   }
 
+  /* 从腾讯云 CloudBase 云数据库读取（多设备实时同步） */
+  async function loadCloud() {
+    try {
+      await CloudStore.init(CFG.envId);
+      var d = await CloudStore.load();
+      if (d && d.matches) {
+        DATA = d; lastSync = Date.now(); saveCache(d);
+        sync('云库已同步 ' + new Date().toTimeString().slice(0, 5));
+        return true;
+      }
+      if (DATA && DATA.matches && DATA.matches.length) { sync('云库暂无数据，显示本地'); return true; }
+      return false;
+    } catch (e) {
+      lastSaveError = '云库读取失败：' + e.message;
+      sync('云库连接失败（' + e.message + '）');
+      return false;
+    }
+  }
+
   /* 写入时从 GitHub API 取最新版本，绕过浏览器和镜像缓存 */
   async function ghGet(path) {
     var url = API + '/repos/' + OWNER + '/' + REPO + '/contents/' + path +
@@ -194,6 +218,26 @@
   async function saveAll(msg) {
     lastSaveError = '';
     if (!CONFIGURED) { lastSaveError = '未配置 GitHub 仓库'; toast(lastSaveError); return false; }
+    if (USE_CB) {
+      // —— 腾讯云 CloudBase 云数据库写入路径 ——
+      sync('保存中…');
+      try {
+        await CloudStore.init(CFG.envId);
+        var remote = await CloudStore.load();
+        if (remote && remote.matches) { DATA = remote; applyPending(); }
+        DATA.updatedAt = new Date().toISOString();
+        await CloudStore.save(DATA);
+        pending = { matches: {}, rounds: null, schedulePhotos: null };
+        lastSync = Date.now(); saveCache(DATA);
+        sync('已保存 ' + new Date().toTimeString().slice(0, 5));
+        return true;
+      } catch (e) {
+        lastSaveError = e.message + '（云库写入失败）';
+        toast('保存失败：' + e.message);
+        sync('保存失败');
+        return false;
+      }
+    }
     if (!token) { lastSaveError = '没填 GitHub Token（到「录入」页填写）'; toast(lastSaveError); return false; }
     sync('保存中…');
     try {
@@ -286,6 +330,7 @@
   }
 
   async function uploadPhoto(dataUrl, nameHint) {
+    if (USE_CB) return dataUrl; // 云数据库模式：照片直接内嵌 base64，无需云存储
     var b64 = dataUrl.split(',')[1];
     var path = 'photos/' + nameHint + '-' + Date.now() + '.jpg';
     await ghPut(path, b64, '上传照片 ' + nameHint);
@@ -1162,21 +1207,31 @@
   }
 
   /* ---------- 启动 ---------- */
-  /* 启动：先本地秒开，再后台刷新 */
+  /* 启动：先本地缓存秒开，再后台拉取最新 */
   (async function boot() {
     sync('加载中…');
-    await loadLocal();
-    pruneDrafts(); applyDrafts();
+    var c = loadCache();
+    if (c && c.matches) { DATA = c; }
     render();
-    refreshRemote().then(function (ok) {
-      if (ok) { pruneDrafts(); applyDrafts(); render(); }
-    });
+    if (USE_CB) {
+      loadCloud().then(function () { pruneDrafts(); applyDrafts(); render(); });
+    } else {
+      loadLocal();
+      render();
+      refreshRemote().then(function (ok) {
+        if (ok) { pruneDrafts(); applyDrafts(); render(); }
+      });
+    }
   })();
 
   setInterval(function () {
     if (document.hidden) return;
     if (Date.now() - lastSync > 60000) {
-      refreshRemote().then(function (ok) { if (ok) { pruneDrafts(); applyDrafts(); render(); } });
+      if (USE_CB) {
+        loadCloud().then(function (ok) { if (ok) { pruneDrafts(); applyDrafts(); render(); } });
+      } else {
+        refreshRemote().then(function (ok) { if (ok) { pruneDrafts(); applyDrafts(); render(); } });
+      }
     }
   }, 60000);
 })();
