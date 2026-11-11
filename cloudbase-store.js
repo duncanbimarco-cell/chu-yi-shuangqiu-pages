@@ -12,13 +12,23 @@
   var db = null;
   var authed = false;
 
+  /* 按需加载 SDK：默认走 GitHub 免费方案时不下载这 378KB，首屏更快 */
+  function loadSdk() {
+    if (window.cloudbase) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'assets/cloudbase.full.js';
+      s.onload = function () { window.cloudbase ? resolve() : reject(new Error('CloudBase SDK 加载失败')); };
+      s.onerror = function () { reject(new Error('CloudBase SDK 加载失败（网络问题）')); };
+      document.head.appendChild(s);
+    });
+  }
+
   function init(envId) {
-    if (typeof window.cloudbase === 'undefined') {
-      return Promise.reject(new Error('CloudBase SDK 未加载（请检查 assets/cloudbase.full.js）'));
-    }
-    app = window.cloudbase.init({ env: envId });
-    db = app.database();
-    return Promise.resolve();
+    return loadSdk().then(function () {
+      app = window.cloudbase.init({ env: envId });
+      db = app.database();
+    });
   }
 
   function ensureAuth() {
