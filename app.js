@@ -56,6 +56,38 @@
   // 班级筛选会同步到链接里，方便直接分享给某个班，但不影响通用二维码。
   var CLASS_FILTER = classFromURL >= 1 && classFromURL <= 16 ? classFromURL : 0;
   var token = localStorage.getItem(TOKEN_KEY) || '';
+  /* 换过仓库名（ball-league → chu-yi-shuangqiu-pages），旧 Token 存在另一个键里。
+     同域名 localStorage 共享，这里自动迁移，裁判不用重新粘贴。
+     同一个 GitHub 账号的 repo 权限 Token 对新仓库同样有效。 */
+  if (!token) {
+    try {
+      var prefix = 'bl_token_' + OWNER + '_';
+      for (var li = 0; li < localStorage.length; li++) {
+        var lk = localStorage.key(li);
+        if (lk && lk.indexOf(prefix) === 0 && lk !== TOKEN_KEY) {
+          var lv = localStorage.getItem(lk);
+          if (lv && /^(ghp_|github_pat_)/.test(lv)) {
+            token = lv;
+            localStorage.setItem(TOKEN_KEY, lv);
+            break;
+          }
+        }
+      }
+    } catch (e) { }
+  }
+  /* 支持 ?token=xxx 一次性带入（给其他裁判设备用）。用完立刻从地址栏抹掉，
+     避免留在浏览记录/截图里。注意：带 Token 的链接只私发给裁判，绝不外发给学生。 */
+  try {
+    var isReadonlyLink = /^(1|true|yes)$/i.test(new URLSearchParams(location.search).get('readonly') || '');
+    var urlTk = isReadonlyLink ? '' : new URLSearchParams(location.search).get('token');
+    if (urlTk) {
+      token = urlTk.trim();
+      localStorage.setItem(TOKEN_KEY, token);
+      var cleanURL = new URL(location.href);
+      cleanURL.searchParams.delete('token');
+      history.replaceState(null, '', cleanURL.pathname + cleanURL.search + cleanURL.hash);
+    }
+  } catch (e) { }
   var isAdmin = localStorage.getItem(UNLOCK_KEY) === '1';
   // 只读模式：链接带 ?readonly=1 时，隐藏录入入口、强制为观众
   var READONLY = /^(1|true|yes)$/i.test(new URLSearchParams(location.search).get('readonly') || '');
