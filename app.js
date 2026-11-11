@@ -128,24 +128,65 @@
     return true;
   }
 
-  /* 第二步：后台静默拉取最新（拿不到也不影响看） */
+  /* 第二步：后台静默拉取最新（多设备实时同步的关键）
+   * 旧版只读 raw.githubusercontent.com（国内常被墙）和 jsdelivr（CDN 缓存数小时），
+   * 导致别的设备永远看不到刚录入的比分。
+   * 现在：有 Token 先走 GitHub API（实时、无缓存、5000 次/小时）；
+   * 观众端走「同源 data/matches.json + 随机参数」（不消耗 API 限额，Pages 重建后即最新）；
+   * 最后才用 jsdelivr / raw 兜底，且都带随机参数破缓存。 */
   async function refreshRemote() {
     if (!CONFIGURED) { sync('本地数据'); return false; }
+
+    // ① GitHub API 读仓库实时内容（base64，无 CDN 缓存）。
+    //   公开仓库读取无需 Token；未登录限额 60 次/小时/IP，校园网多人共用出口时可能被打爆，
+    //   所以失败后进入 5 分钟「退让期」，期间直接走下面不消耗限额的同源文件。
+    var cooldownKey = 'bl_api_cooldown_' + OWNER + '_' + REPO;
+    var cooldown = 0;
+    try { cooldown = Number(localStorage.getItem(cooldownKey) || 0); } catch (e) { }
+    if (Date.now() > cooldown) {
+      try {
+        var apiUrl = API + '/repos/' + OWNER + '/' + REPO + '/contents/' + DATA_PATH +
+          '?ref=' + encodeURIComponent(BRANCH) + '&t=' + Date.now();
+        var r = await fetch(apiUrl, { headers: ghHeaders(), cache: 'no-store' });
+        if (r.ok) {
+          var meta = await r.json();
+          if (meta && meta.content) {
+            var j = JSON.parse(b64ToUtf8(meta.content));
+            if (j && j.matches) {
+              DATA = j; lastSync = Date.now();
+              (DATA.matches || []).forEach(function (m) { delete m._local; });
+              if (meta.sha) lastSha = meta.sha;
+              sync('已同步 ' + new Date().toTimeString().slice(0, 5));
+              return true;
+            }
+          }
+        } else if (r.status === 403 || r.status === 429) {
+          try { localStorage.setItem(cooldownKey, String(Date.now() + 300000)); } catch (e) { }
+        }
+      } catch (e) { /* 网络不通 → 用下面无限额的源 */ }
+    }
+
+    // ② 所有设备：同源文件（不消耗 GitHub API 限额）+ jsdelivr + raw，均带随机参数破缓存
     var bases = [
-      'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/' + BRANCH + '/' + DATA_PATH,
-      'https://cdn.jsdelivr.net/gh/' + OWNER + '/' + REPO + '@' + BRANCH + '/' + DATA_PATH
+      DATA_PATH,
+      'https://cdn.jsdelivr.net/gh/' + OWNER + '/' + REPO + '@' + BRANCH + '/' + DATA_PATH,
+      'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/' + BRANCH + '/' + DATA_PATH
     ];
     for (var i = 0; i < bases.length; i++) {
       try {
-        var j = await fetchJSON(bases[i] + '?t=' + Date.now(), 5000);
-        if (j && j.matches) {
-          DATA = j;
+        var bust = '?t=' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+        var k = await fetchJSON(bases[i] + bust, 5000);
+        if (k && k.matches) {
+          DATA = k;
+          (DATA.matches || []).forEach(function (m) { delete m._local; });
           lastSync = Date.now();
           sync('已同步 ' + new Date().toTimeString().slice(0, 5));
           return true;
         }
       } catch (e) { /* 换下一个源 */ }
     }
+    // 兼容历史数据：旧版本可能把本机标记写进了仓库，显示前统一清掉
+    (DATA.matches || []).forEach(function (m) { delete m._local; });
     sync(DATA && DATA.matches && DATA.matches.length ? '本地数据 · 实时刷新未连上' : '数据加载失败');
     return false;
   }
@@ -215,6 +256,14 @@
     $('#sheet').scrollTop = 0;
   }
 
+  /* 写回云端前剥离本机专用标记（_local 只用于 UI 显示"待同步"，
+     不能存进仓库，否则所有设备打开都显示"待同步"） */
+  function cleanForSave() {
+    var copy = JSON.parse(JSON.stringify(DATA));
+    (copy.matches || []).forEach(function (m) { delete m._local; });
+    return copy;
+  }
+
   async function saveAll(msg) {
     lastSaveError = '';
     if (!CONFIGURED) { lastSaveError = '未配置 GitHub 仓库'; toast(lastSaveError); return false; }
@@ -226,7 +275,7 @@
         var remote = await CloudStore.load();
         if (remote && remote.matches) { DATA = remote; applyPending(); }
         DATA.updatedAt = new Date().toISOString();
-        await CloudStore.save(DATA);
+        await CloudStore.save(cleanForSave());
         pending = { matches: {}, rounds: null, schedulePhotos: null };
         lastSync = Date.now(); saveCache(DATA);
         sync('已保存 ' + new Date().toTimeString().slice(0, 5));
@@ -251,7 +300,7 @@
         toast('读取远端失败，直接尝试写入…');
       }
       DATA.updatedAt = new Date().toISOString();
-      var j1 = await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(DATA, null, 2)), msg || '更新比赛数据', sha);
+      var j1 = await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(cleanForSave(), null, 2)), msg || '更新比赛数据', sha);
       if (j1 && j1.content && j1.content.sha) lastSha = j1.content.sha;
       pending = { matches: {}, rounds: null, schedulePhotos: null };
       lastSync = Date.now();
@@ -263,7 +312,7 @@
         try {
           var latestSha = await loadLatestForSave();
           DATA.updatedAt = new Date().toISOString();
-          var j2 = await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(DATA, null, 2)), msg || '更新比赛数据', latestSha);
+          var j2 = await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(cleanForSave(), null, 2)), msg || '更新比赛数据', latestSha);
           if (j2 && j2.content && j2.content.sha) lastSha = j2.content.sha;
           pending = { matches: {}, rounds: null, schedulePhotos: null };
           lastSync = Date.now();
@@ -1165,7 +1214,7 @@
       L.push('③ 写入测试       跳过（没填 Token）');
     } else {
       try {
-        await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(DATA, null, 2)), '自检写入测试');
+        await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(cleanForSave(), null, 2)), '自检写入测试');
         L.push('③ 写入测试       成功 ✅ 录入功能正常');
       } catch (e) {
         L.push('③ 写入测试       失败 HTTP ' + (e.status || '-') + ' / ' + e.message);
@@ -1216,11 +1265,14 @@
     if (USE_CB) {
       loadCloud().then(function () { pruneDrafts(); applyDrafts(); render(); });
     } else {
-      loadLocal();
-      render();
-      refreshRemote().then(function (ok) {
-        if (ok) { pruneDrafts(); applyDrafts(); render(); }
-      });
+      // 必须 await：否则本地旧文件会在实时数据到达之后才写回，把新比分覆盖掉
+      (async function () {
+        await loadLocal();
+        render();
+        refreshRemote().then(function (ok) {
+          if (ok) { pruneDrafts(); applyDrafts(); render(); }
+        });
+      })();
     }
   })();
 
