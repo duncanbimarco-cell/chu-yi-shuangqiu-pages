@@ -53,7 +53,7 @@
       "date": "",
       "scoreA": 3,
       "scoreB": 2,
-      "status": "finished",
+      "status": "pending",
       "attA": {
         "count": null,
         "names": ""
@@ -1883,5 +1883,5 @@
       "note": ""
     }
   ],
-  "updatedAt": "2026-11-11T11:28:57.218Z"
+  "updatedAt": "2026-11-11T11:31:21.883Z"
 }
