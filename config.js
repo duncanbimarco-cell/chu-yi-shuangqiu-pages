@@ -51,8 +51,8 @@ window.APP_CONFIG = {
       {
         id: "basketball", label: "篮球吉尼斯", icon: "🏀", color: "orange",
         events: [
-          { id: "basketball-free-throw-60", name: "60 秒罚球 自投自抢", unit: "球", order: "desc", input: "number", genders: ["female"], hint: "女生项目，例如 16" },
-          { id: "basketball-three-point-60", name: "60 秒三分球 自投自抢", unit: "球", order: "desc", input: "number", genders: ["female"], hint: "女生项目，例如 8" },
+          { id: "basketball-free-throw-60", name: "60 秒罚球 自投自抢", unit: "球", order: "desc", input: "number", genders: ["male", "female"], hint: "例如 16" },
+          { id: "basketball-three-point-60", name: "60 秒三分球 自投自抢", unit: "球", order: "desc", input: "number", genders: ["male", "female"], hint: "例如 8" },
           { id: "basketball-touch-height", name: "摸高", unit: "cm", order: "desc", input: "number", hint: "例如 285" }
         ]
       },

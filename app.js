@@ -941,7 +941,7 @@
     var filtered = categories.filter(function (category) { return RECORD_FILTER === 'all' || category.id === RECORD_FILTER; });
     var html = '<section class="guinness-hero"><div class="guinness-hero-mark">🌟</div><div>' +
       '<span class="view-kicker">CAMPUS GUINNESS CHALLENGE</span><h2>学校吉尼斯纪录挑战榜</h2>' +
-      '<p>按项目设男子、女子组别；女生限定项目仅展示女子组。公开展示前 ' + podiumSize() + ' 名，第一名为当前纪录保持者。</p></div>' +
+      '<p>所有项目均设男子、女子组别，各组公开展示前 ' + podiumSize() + ' 名，第一名为当前纪录保持者。</p></div>' +
       '<div class="guinness-hero-stats"><div><strong>' + eventCount + '</strong><span>挑战项目</span></div><div><strong>' + entries.length + '</strong><span>已录成绩</span></div></div></section>';
     html += '<div class="record-filter" role="tablist" aria-label="挑战类别筛选"><button data-record-filter="all" class="' + (RECORD_FILTER === 'all' ? 'on' : '') + '">全部</button>';
     categories.forEach(function (category) {
