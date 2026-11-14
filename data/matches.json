@@ -1886,5 +1886,9 @@
   "guinness": {
     "entries": []
   },
-  "updatedAt": "2026-11-11T11:55:42.903Z"
+  "updatedAt": "2026-11-11T11:55:42.903Z",
+  "_syncDiagnostic": {
+    "id": "sync-e68fdea9-c8fb-4c37-9f65-ede6764621e7",
+    "sentAt": "2026-11-14T04:34:56.001Z"
+  }
 }
