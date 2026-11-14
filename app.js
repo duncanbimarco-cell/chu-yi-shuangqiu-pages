@@ -52,6 +52,7 @@
   var DATA = null;          // 全量数据
   var VIEW = 'schedule';
   var SPORT_FILTER = 'all';
+  var RECORD_FILTER = 'all';
   var classFromURL = parseInt(new URLSearchParams(location.search).get('class') || '', 10);
   // 班级筛选会同步到链接里，方便直接分享给某个班，但不影响通用二维码。
   var CLASS_FILTER = classFromURL >= 1 && classFromURL <= 16 ? classFromURL : 0;
@@ -92,7 +93,7 @@
   // 只读模式：链接带 ?readonly=1 时，隐藏录入入口、强制为观众
   var READONLY = /^(1|true|yes)$/i.test(new URLSearchParams(location.search).get('readonly') || '');
   if (READONLY) isAdmin = false;
-  var pending = { matches: {}, rounds: null, schedulePhotos: null }; // 待写入的改动
+  var pending = { matches: {}, rounds: null, schedulePhotos: null, guinness: null }; // 待写入的改动
   var lastSync = 0;
   var lastSaveError = '';
   var lastSha = null;   // 最近一次已知的文件版本，读取失败时用来直接写入
@@ -308,7 +309,7 @@
         if (remote && remote.matches) { DATA = remote; applyPending(); }
         DATA.updatedAt = new Date().toISOString();
         await CloudStore.save(cleanForSave());
-        pending = { matches: {}, rounds: null, schedulePhotos: null };
+        pending = { matches: {}, rounds: null, schedulePhotos: null, guinness: null };
         lastSync = Date.now(); saveCache(DATA);
         sync('已保存 ' + new Date().toTimeString().slice(0, 5));
         return true;
@@ -334,7 +335,7 @@
       DATA.updatedAt = new Date().toISOString();
       var j1 = await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(cleanForSave(), null, 2)), msg || '更新比赛数据', sha);
       if (j1 && j1.content && j1.content.sha) lastSha = j1.content.sha;
-      pending = { matches: {}, rounds: null, schedulePhotos: null };
+      pending = { matches: {}, rounds: null, schedulePhotos: null, guinness: null };
       lastSync = Date.now();
       sync('已保存 ' + new Date().toTimeString().slice(0, 5));
       return true;
@@ -346,7 +347,7 @@
           DATA.updatedAt = new Date().toISOString();
           var j2 = await ghPut(DATA_PATH, utf8ToB64(JSON.stringify(cleanForSave(), null, 2)), msg || '更新比赛数据', latestSha);
           if (j2 && j2.content && j2.content.sha) lastSha = j2.content.sha;
-          pending = { matches: {}, rounds: null, schedulePhotos: null };
+          pending = { matches: {}, rounds: null, schedulePhotos: null, guinness: null };
           lastSync = Date.now();
           sync('已保存 ' + new Date().toTimeString().slice(0, 5));
           return true;
@@ -381,6 +382,7 @@
     });
     if (pending.rounds) DATA.rounds = pending.rounds;
     if (pending.schedulePhotos) DATA.schedulePhotos = pending.schedulePhotos;
+    if (pending.guinness) DATA.guinness = pending.guinness;
   }
   function markPending(kind, id, obj) {
     if (kind === 'match') pending.matches[id] = obj;
@@ -516,6 +518,127 @@
       rounds: Object.keys(rounds).length,
       finished: finished
     };
+  }
+
+  /* ---------- 学校吉尼斯纪录挑战榜 ---------- */
+  function guinnessConfig() {
+    return CFG.guinness || { podiumSize: 3, categories: [] };
+  }
+  function guinnessCategories() {
+    var categories = guinnessConfig().categories;
+    return Array.isArray(categories) ? categories : [];
+  }
+  function allGuinnessEvents() {
+    var list = [];
+    guinnessCategories().forEach(function (category) {
+      (category.events || []).forEach(function (event) {
+        list.push({ category: category, event: event });
+      });
+    });
+    return list;
+  }
+  function guinnessEventMeta(id) {
+    var list = allGuinnessEvents();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].event.id === id) return list[i];
+    }
+    return null;
+  }
+  function guinnessGenders(event) {
+    return Array.isArray(event && event.genders) && event.genders.length ? event.genders : ['male', 'female'];
+  }
+  function genderName(gender) { return gender === 'female' ? '女子' : '男子'; }
+  function ensureGuinness() {
+    if (!DATA) return { entries: [] };
+    if (!DATA.guinness || typeof DATA.guinness !== 'object') DATA.guinness = { entries: [] };
+    if (!Array.isArray(DATA.guinness.entries)) DATA.guinness.entries = [];
+    return DATA.guinness;
+  }
+  function guinnessEntries() { return ensureGuinness().entries; }
+  function podiumSize() {
+    var size = Number(guinnessConfig().podiumSize) || 3;
+    return Math.max(1, Math.min(10, size));
+  }
+  function parseRecordValue(raw, event) {
+    var input = String(raw == null ? '' : raw).trim().replace(/：/g, ':').replace(/[，,]/g, '');
+    if (!input) return NaN;
+    if (event && event.input === 'duration') {
+      var duration = input.replace(/[分′']/g, ':').replace(/[秒″\"]/g, '').replace(/\s/g, '');
+      if (duration.indexOf(':') >= 0) {
+        var bits = duration.split(':');
+        if (bits.length !== 2) return NaN;
+        var mins = Number(bits[0]), secs = Number(bits[1]);
+        if (!isFinite(mins) || !isFinite(secs) || mins < 0 || secs < 0 || secs >= 60) return NaN;
+        return mins * 60 + secs;
+      }
+      input = duration;
+    }
+    var value = Number(input.replace(/[^0-9.]/g, ''));
+    return isFinite(value) && value > 0 ? value : NaN;
+  }
+  function trimNumber(value, decimals) {
+    var text = Number(value).toFixed(decimals);
+    return text.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  }
+  function formatDuration(value) {
+    var minutes = Math.floor(value / 60);
+    var seconds = value - minutes * 60;
+    var whole = Math.floor(seconds);
+    var decimal = Math.round((seconds - whole) * 10);
+    if (decimal === 10) { whole++; decimal = 0; }
+    if (whole === 60) { minutes++; whole = 0; }
+    return minutes + '′' + String(whole).padStart(2, '0') + (decimal ? '.' + decimal : '') + '″';
+  }
+  function formatRecordValue(value, event) {
+    var number = Number(value);
+    if (!isFinite(number)) return '—';
+    if (event && event.input === 'duration') return formatDuration(number);
+    if (event && event.unit === '秒') return number.toFixed(2) + ' 秒';
+    if (event && event.unit === 'kg') return trimNumber(number, 1) + ' kg';
+    return trimNumber(number, 1) + (event && event.unit ? ' ' + event.unit : '');
+  }
+  function recordSort(event) {
+    return function (a, b) {
+      var av = Number(a.value), bv = Number(b.value);
+      var score = event.order === 'asc' ? av - bv : bv - av;
+      if (score) return score;
+      return String(a.recordedAt || a.createdAt || '').localeCompare(String(b.recordedAt || b.createdAt || ''));
+    };
+  }
+  function rankingEntries(event, gender) {
+    return guinnessEntries().filter(function (entry) {
+      return entry && entry.eventId === event.id && entry.gender === gender && isFinite(Number(entry.value));
+    }).sort(recordSort(event));
+  }
+  function recordDateLabel(entry) {
+    var value = String(entry.recordedAt || entry.createdAt || '');
+    return /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(5, 10).replace('-', '月') + '日' : '';
+  }
+  function recordDirectionLabel(event) {
+    return event.order === 'asc' ? '用时越短越靠前' : '成绩越高越靠前';
+  }
+  function classOptions(selected) {
+    var classes = classNumbers();
+    if (!classes.length) classes = Array.from({ length: 16 }, function (_, i) { return i + 1; });
+    return classes.map(function (number) {
+      return '<option value="' + number + '"' + (Number(selected) === number ? ' selected' : '') + '>' + teamName(number) + '</option>';
+    }).join('');
+  }
+  function genderOptions(event, selected) {
+    return guinnessGenders(event).map(function (gender) {
+      return '<option value="' + gender + '"' + (gender === selected ? ' selected' : '') + '>' + genderName(gender) + '</option>';
+    }).join('');
+  }
+  function recordEventOptions(selected) {
+    return allGuinnessEvents().map(function (meta) {
+      var event = meta.event;
+      return '<option value="' + esc(event.id) + '"' + (event.id === selected ? ' selected' : '') + '>' + esc(meta.category.label + ' · ' + event.name) + '</option>';
+    }).join('');
+  }
+  function todayInputValue() {
+    var date = new Date();
+    var offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 10);
   }
 
   function matchdayHTML() {
@@ -775,6 +898,100 @@
     return html;
   }
 
+  /* ---------- 渲染：学校吉尼斯纪录挑战榜 ---------- */
+  function recordPanelHTML(event, gender) {
+    var rows = rankingEntries(event, gender).slice(0, podiumSize());
+    var html = '<section class="record-panel record-panel-' + gender + '">' +
+      '<div class="record-panel-hd"><span class="record-gender gender-' + gender + '">' + genderName(gender) + '</span>' +
+      '<span class="record-panel-rule">' + esc(recordDirectionLabel(event)) + '</span></div>';
+    if (!rows.length) {
+      html += '<div class="record-empty"><span>☆</span>等待首位挑战者</div>';
+    } else {
+      html += '<ol class="record-list">';
+      rows.forEach(function (entry, index) {
+        var place = index + 1;
+        var suffix = recordDateLabel(entry);
+        html += '<li class="record-row record-place-' + place + '">' +
+          '<span class="record-place">' + (place === 1 ? '纪录' : place) + '</span>' +
+          '<div class="record-person"><strong>' + esc(entry.name || '未填写姓名') + '</strong>' +
+          (entry.classNo ? '<span>' + esc(teamName(entry.classNo)) + '</span>' : '') +
+          (suffix ? '<small>' + esc(suffix) + '</small>' : '') +
+          '</div><div class="record-value">' + esc(formatRecordValue(entry.value, event)) + '</div></li>';
+      });
+      html += '</ol>';
+    }
+    return html + '</section>';
+  }
+
+  function recordEventHTML(meta) {
+    var event = meta.event;
+    var genders = guinnessGenders(event);
+    var html = '<article class="record-event">' +
+      '<div class="record-event-hd"><div><span class="record-event-category">' + esc(meta.category.icon || '🌟') + ' ' + esc(meta.category.label) + '</span>' +
+      '<h3>' + esc(event.name) + '</h3></div><span class="record-unit">' + esc(event.unit || '成绩') + '</span></div>' +
+      '<div class="record-panels">';
+    genders.forEach(function (gender) { html += recordPanelHTML(event, gender); });
+    return html + '</div></article>';
+  }
+
+  function guinnessHTML() {
+    var categories = guinnessCategories();
+    var entries = guinnessEntries();
+    var eventCount = allGuinnessEvents().length;
+    var filtered = categories.filter(function (category) { return RECORD_FILTER === 'all' || category.id === RECORD_FILTER; });
+    var html = '<section class="guinness-hero"><div class="guinness-hero-mark">🌟</div><div>' +
+      '<span class="view-kicker">CAMPUS GUINNESS CHALLENGE</span><h2>学校吉尼斯纪录挑战榜</h2>' +
+      '<p>按项目设男子、女子组别；女生限定项目仅展示女子组。公开展示前 ' + podiumSize() + ' 名，第一名为当前纪录保持者。</p></div>' +
+      '<div class="guinness-hero-stats"><div><strong>' + eventCount + '</strong><span>挑战项目</span></div><div><strong>' + entries.length + '</strong><span>已录成绩</span></div></div></section>';
+    html += '<div class="record-filter" role="tablist" aria-label="挑战类别筛选"><button data-record-filter="all" class="' + (RECORD_FILTER === 'all' ? 'on' : '') + '">全部</button>';
+    categories.forEach(function (category) {
+      html += '<button data-record-filter="' + esc(category.id) + '" class="' + (RECORD_FILTER === category.id ? 'on' : '') + '">' + esc(category.icon || '🌟') + esc(category.label) + '</button>';
+    });
+    html += '</div><div class="record-guide"><strong>榜单规则</strong><span>系统保留全部挑战成绩，榜单按项目和性别自动排序；距离、次数、角度和重量取高，跑步用时取低。</span></div>';
+    filtered.forEach(function (category) {
+      html += '<section class="record-category record-tone-' + esc(category.color || 'blue') + '"><div class="record-category-hd">' +
+        '<span class="record-category-icon">' + esc(category.icon || '🌟') + '</span><div><span>' + esc(category.label.toUpperCase ? category.label.toUpperCase() : category.label) + '</span><h2>' + esc(category.label) + '</h2></div>' +
+        '<em>' + (category.events || []).length + ' 项</em></div><div class="record-grid">';
+      (category.events || []).forEach(function (event) { html += recordEventHTML({ category: category, event: event }); });
+      html += '</div></section>';
+    });
+    if (!filtered.length) html += '<div class="card"><div class="empty">暂未配置挑战项目</div></div>';
+    return html;
+  }
+
+  function guinnessAdminHTML() {
+    var metas = allGuinnessEvents();
+    if (!metas.length) return '';
+    var meta = metas[0], event = meta.event;
+    var recent = guinnessEntries().slice().sort(function (a, b) {
+      return String(b.createdAt || b.recordedAt || '').localeCompare(String(a.createdAt || a.recordedAt || ''));
+    }).slice(0, 10);
+    var html = '<div class="card record-admin-card"><div class="card-hd"><h2>🌟 吉尼斯挑战录入</h2><span class="sub">公开显示每项前三</span></div><div class="sheet-body">' +
+      '<div class="hint">录入后自动刷新男子 / 女子榜单。系统保留全部成绩，不会只保存前三名。</div><div style="height:10px"></div>' +
+      '<div class="row2"><div class="field"><label>挑战项目</label><select id="recordEvent">' + recordEventOptions(event.id) + '</select></div>' +
+      '<div class="field"><label>组别</label><select id="recordGender">' + genderOptions(event, guinnessGenders(event)[0]) + '</select></div></div>' +
+      '<div class="row2"><div class="field"><label>挑战者姓名</label><input type="text" id="recordName" maxlength="20" placeholder="请输入姓名"></div>' +
+      '<div class="field"><label>所在班级</label><select id="recordClass">' + classOptions(1) + '</select></div></div>' +
+      '<div class="row2"><div class="field"><label id="recordResultLabel">挑战成绩（' + esc(event.unit || '成绩') + '）</label><input type="text" id="recordResult" inputmode="decimal" placeholder="' + esc(event.hint || '请输入成绩') + '"></div>' +
+      '<div class="field"><label>挑战日期</label><input type="date" id="recordDate" value="' + todayInputValue() + '"></div></div>' +
+      '<div class="field"><label>备注（可留空）</label><input type="text" id="recordNote" maxlength="60" placeholder="例如 测试地点、裁判确认"></div>' +
+      '<div id="recordRule" class="hint" style="margin:-4px 0 12px">排序规则：' + esc(recordDirectionLabel(event)) + '。' + esc(event.hint || '') + '</div>' +
+      '<button class="btn" id="saveRecordBtn">保存挑战成绩并更新榜单</button></div></div>';
+    html += '<div class="card record-admin-history"><div class="card-hd"><h2>最近录入</h2><span class="sub">删除后重新排序</span></div>';
+    if (!recent.length) {
+      html += '<div class="empty">还没有录入挑战成绩</div>';
+    } else {
+      recent.forEach(function (entry) {
+        var entryMeta = guinnessEventMeta(entry.eventId);
+        if (!entryMeta) return;
+        html += '<div class="record-history-row"><div><strong>' + esc(entry.name || '未填写姓名') + '</strong><span>' + (entry.classNo ? esc(teamName(entry.classNo)) : '班级未填') + ' · ' + esc(genderName(entry.gender)) + ' · ' + esc(entryMeta.event.name) + '</span>' +
+          '<small>' + esc(formatRecordValue(entry.value, entryMeta.event)) + (recordDateLabel(entry) ? ' · ' + esc(recordDateLabel(entry)) : '') + '</small></div>' +
+          '<button class="record-delete" data-record-delete="' + esc(entry.id) + '" aria-label="删除这条挑战成绩">删除</button></div>';
+      });
+    }
+    return html + '</div>';
+  }
+
   /* ---------- 渲染：录入（管理） ---------- */
   function adminHTML() {
     if (!isAdmin) {
@@ -802,6 +1019,8 @@
     }
     if (!pendings.length) html += '<div class="empty">全部比赛已录完 🎉</div>';
     html += '</div>';
+
+    html += guinnessAdminHTML();
 
     html += '<div class="card"><div class="card-hd"><h2>GitHub Token</h2>' +
       '<span class="sub">' + (token ? '已填写 ✅' : '未填写 ❌') + '</span></div><div class="sheet-body">' +
@@ -968,6 +1187,7 @@
     });
     if (VIEW === 'schedule') app.innerHTML = scheduleHTML();
     else if (VIEW === 'standings') app.innerHTML = standingsHTML();
+    else if (VIEW === 'guinness') app.innerHTML = guinnessHTML();
     else if (VIEW === 'attendance') app.innerHTML = attendanceHTML();
     else app.innerHTML = adminHTML();
     window.scrollTo(0, 0);
@@ -982,6 +1202,8 @@
       render();
       return;
     }
+    var recordFilter = e.target.closest('[data-record-filter]');
+    if (recordFilter) { RECORD_FILTER = recordFilter.dataset.recordFilter || 'all'; render(); return; }
     var seg = e.target.closest('.seg button');
     if (seg) { SPORT_FILTER = seg.dataset.sport; render(); return; }
 
@@ -1017,9 +1239,12 @@
     if (pd) { sheetDelPhoto(parseInt(pd.dataset.photoDel, 10)); return; }
     var sd = e.target.closest('[data-sched-del]');
     if (sd) { sheetDelSchedulePhoto(parseInt(sd.dataset.schedDel, 10)); return; }
+    var recordDel = e.target.closest('[data-record-delete]');
+    if (recordDel) { deleteGuinnessRecord(recordDel.dataset.recordDelete); return; }
 
     if (e.target.id === 'addPhoto') { $('#photoInput').click(); return; }
     if (e.target.id === 'saveMatch') { saveMatch(); return; }
+    if (e.target.id === 'saveRecordBtn') { saveGuinnessRecord(); return; }
     if (e.target.id === 'clearScore') { clearScore(); return; }
     if (e.target.id === 'setPending') { setPending(); return; }
     if (e.target.id === 'unlockBtn') { unlock(); return; }
@@ -1049,6 +1274,10 @@
       var cls = parseInt(e.target.value || '0', 10) || 0;
       saveClassFilter(cls);
       render();
+      return;
+    }
+    if (e.target.id === 'recordEvent') {
+      syncGuinnessRecordForm();
       return;
     }
     if (e.target.id === 'photoInput' && e.target.files[0]) {
@@ -1177,6 +1406,80 @@
     });
     markPending('rounds', null, DATA.rounds);
     saveAll('更新轮次时间').then(function (ok) { if (ok) toast('轮次时间已保存'); });
+  }
+  function syncGuinnessRecordForm() {
+    var select = $('#recordEvent');
+    var gender = $('#recordGender');
+    var value = $('#recordResult');
+    var label = $('#recordResultLabel');
+    var rule = $('#recordRule');
+    if (!select || !gender || !value || !label || !rule) return;
+    var meta = guinnessEventMeta(select.value);
+    if (!meta) return;
+    var event = meta.event;
+    var previousGender = gender.value;
+    gender.innerHTML = genderOptions(event, previousGender);
+    label.textContent = '挑战成绩（' + (event.unit || '成绩') + '）';
+    value.placeholder = event.hint || '请输入成绩';
+    value.inputMode = event.input === 'duration' ? 'text' : 'decimal';
+    rule.textContent = '排序规则：' + recordDirectionLabel(event) + '。' + (event.hint || '');
+  }
+  function saveGuinnessRecord() {
+    if (!isAdmin) { toast('请先进入录入模式'); return; }
+    if (!token) { toast('请先在「录入」页填写 GitHub Token'); return; }
+    var eventSelect = $('#recordEvent');
+    var genderSelect = $('#recordGender');
+    var nameInput = $('#recordName');
+    var classSelect = $('#recordClass');
+    var resultInput = $('#recordResult');
+    var dateInput = $('#recordDate');
+    var noteInput = $('#recordNote');
+    if (!eventSelect || !genderSelect || !nameInput || !classSelect || !resultInput) return;
+    var meta = guinnessEventMeta(eventSelect.value);
+    if (!meta) { toast('请先选择挑战项目'); return; }
+    var event = meta.event;
+    var gender = genderSelect.value;
+    var name = nameInput.value.trim();
+    var classNo = Number(classSelect.value);
+    var result = parseRecordValue(resultInput.value, event);
+    if (!name) { toast('请填写挑战者姓名'); nameInput.focus(); return; }
+    if (guinnessGenders(event).indexOf(gender) < 0) { toast('该项目不支持当前组别'); return; }
+    if (!isFinite(result)) { toast('成绩格式不正确，请按提示填写'); resultInput.focus(); return; }
+    var record = {
+      id: 'g-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+      eventId: event.id,
+      gender: gender,
+      name: name,
+      classNo: classNo,
+      value: result,
+      recordedAt: (dateInput && dateInput.value) || todayInputValue(),
+      note: noteInput ? noteInput.value.trim() : '',
+      createdAt: new Date().toISOString()
+    };
+    var records = ensureGuinness();
+    records.entries.push(record);
+    markPending('guinness', null, records);
+    saveAll('录入吉尼斯挑战成绩').then(function (ok) {
+      if (ok) {
+        render();
+        toast('已保存：' + event.name + ' ' + genderName(gender) + ' ' + formatRecordValue(result, event));
+      } else {
+        toast('保存失败：' + lastSaveError);
+      }
+    });
+  }
+  function deleteGuinnessRecord(id) {
+    if (!isAdmin) return;
+    var entries = guinnessEntries();
+    var record = entries.filter(function (entry) { return entry.id === id; })[0];
+    if (!record) return;
+    if (!window.confirm('确认删除这条挑战成绩吗？删除后榜单会立即重新排序。')) return;
+    DATA.guinness.entries = entries.filter(function (entry) { return entry.id !== id; });
+    markPending('guinness', null, DATA.guinness);
+    saveAll('删除一条吉尼斯挑战成绩').then(function (ok) {
+      if (ok) { render(); toast('已删除，榜单已重新排序'); }
+      else toast('删除保存失败：' + lastSaveError);
+    });
   }
   function unlock() {
     var code = ($('#codeInput').value || '').trim();

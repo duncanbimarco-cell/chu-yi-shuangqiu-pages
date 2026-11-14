@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "title": "北大附中初一双球联赛",
   "rounds": [
     {
@@ -1883,5 +1883,8 @@
       "note": ""
     }
   ],
+  "guinness": {
+    "entries": []
+  },
   "updatedAt": "2026-11-11T11:55:42.903Z"
 }
