@@ -350,9 +350,9 @@
       "b": 8,
       "venue": "2/6号场地",
       "date": "",
-      "scoreA": null,
-      "scoreB": null,
-      "status": "pending",
+      "scoreA": 3,
+      "scoreB": 3,
+      "status": "finished",
       "attA": {
         "count": null,
         "names": ""
@@ -1886,5 +1886,5 @@
   "guinness": {
     "entries": []
   },
-  "updatedAt": "2026-11-19T06:46:50.889Z"
+  "updatedAt": "2026-11-19T06:47:09.374Z"
 }
