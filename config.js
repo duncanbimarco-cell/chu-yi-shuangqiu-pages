@@ -42,6 +42,7 @@ window.APP_CONFIG = {
           { id: "run-50m", name: "50 米", unit: "秒", order: "asc", input: "decimal", hint: "例如 7.20" },
           { id: "pull-up", name: "引体向上", unit: "次", order: "desc", input: "number", hint: "例如 18" },
           { id: "sit-up", name: "仰卧起坐", unit: "次", order: "desc", input: "number", hint: "例如 55" },
+          { id: "sit-and-reach", name: "坐位体前屈", unit: "cm", order: "desc", input: "decimal", hint: "例如 23.4" },
           { id: "run-1000m", name: "1000 米", unit: "分秒", order: "asc", input: "duration", hint: "例如 3:45 或 225" },
           { id: "run-800m", name: "800 米", unit: "分秒", order: "asc", input: "duration", hint: "例如 3:20 或 200" },
           { id: "grip-left", name: "左手握力", unit: "kg", order: "desc", input: "decimal", hint: "例如 42.5" },
