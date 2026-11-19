@@ -12,8 +12,48 @@
   // 是否启用腾讯云 CloudBase 云数据库（根治国内访问不稳、实现多设备实时同步）
   var USE_CB = CFG.backend === 'cloudbase' && !!CFG.envId;
   var CACHE_KEY = 'bl_cache_' + (OWNER || 'x') + '_' + (REPO || 'x');
-  function saveCache(d) { try { if (d && d.matches) localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch (e) { } }
-  function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { return null; } }
+  // 缓存格式升级：旧版缓存里可能存着脱敏姓名/旧比分，换版本后一律丢弃重新拉取。
+  var CACHE_VERSION = '20261119f';
+  function saveCache(d) {
+    try { if (d && d.matches) localStorage.setItem(CACHE_KEY, JSON.stringify({ v: CACHE_VERSION, data: d })); }
+    catch (e) { }
+  }
+  function loadCache() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (raw && raw.v === CACHE_VERSION && raw.data && raw.data.matches) return raw.data;
+    } catch (e) { }
+    return null;
+  }
+  /* 旧版 app.js 会把姓名打码后存进数据里。这里按权威名单就地修复，
+     即使手机完全连不上网，也能显示完整姓名。 */
+  var FULL_NAMES = {
+    'female|run-50m|1':'刘京扬','female|run-50m|2':'夏越洋','female|run-50m|3':'张雨婷',
+    'female|run-800m|1':'刘京扬','female|run-800m|2':'张雨婷','female|run-800m|3':'姚雅馨',
+    'female|sit-up|1':'李许赟','female|sit-up|2':'马宥惜','female|sit-up|3':'王思茹',
+    'female|sit-and-reach|1':'李许赟','female|sit-and-reach|2':'蔡烜','female|sit-and-reach|3':'王溢煊',
+    'female|standing-long-jump|1':'张雨婷','female|standing-long-jump|2':'崔盤成','female|standing-long-jump|3':'熊昕然',
+    'male|run-1000m|1':'王宽阳','male|run-1000m|2':'刘奕扬','male|run-1000m|3':'周屿辰',
+    'male|run-50m|1':'王宽阳','male|run-50m|2':'魏嘉诺','male|run-50m|3':'安时霄',
+    'male|sit-and-reach|1':'李丘静远','male|sit-and-reach|2':'杜雨坤','male|sit-and-reach|3':'许一志',
+    'male|pull-up|1':'魏进扬','male|pull-up|2':'吴震桓','male|pull-up|3':'黄品睿',
+    'male|standing-long-jump|1':'王宽阳','male|standing-long-jump|2':'安时霄','male|standing-long-jump|3':'张辰葆'
+  };
+  function healGuinnessNames(d) {
+    try {
+      if (!d || !d.guinness || !Array.isArray(d.guinness.entries)) return;
+      var fixed = false;
+      d.guinness.entries.forEach(function (e) {
+        if (!e || typeof e !== 'object') return;
+        for (var k in e) { if (/^(maskedName|nameMasked|displayName|hiddenName)$/.test(k)) { delete e[k]; fixed = true; } }
+        var key = String(e.gender || '') + '|' + String(e.eventId || '') + '|' + String(e.sourceRank || '');
+        var full = FULL_NAMES[key];
+        if (full && e.name !== full) { e.name = full; fixed = true; }
+        else if (!full && /[*?□・]/.test(String(e.name || ''))) { e.name = String(e.name).replace(/[*?□・]/g, ''); fixed = true; }
+      });
+      if (fixed) saveCache(d);
+    } catch (err) { }
+  }
 
   var TOKEN_KEY = 'bl_token_' + OWNER + '_' + REPO;
   var UNLOCK_KEY = 'bl_admin_' + OWNER + '_' + REPO;
@@ -1183,6 +1223,7 @@
   /* ---------- 事件 ---------- */
   function render() {
     if (!DATA) return;
+    healGuinnessNames(DATA);
     $('#appTitle').textContent = CFG.title || DATA.title || '班级球类联赛';
     var brandKicker = $('#brandKicker');
     if (brandKicker) brandKicker.textContent = (CFG.brand && CFG.brand.kicker) || '2026 CAMPUS LEAGUE';
