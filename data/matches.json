@@ -97,9 +97,9 @@
       "b": 11,
       "venue": "3/7号场地",
       "date": "",
-      "scoreA": null,
-      "scoreB": null,
-      "status": "pending",
+      "scoreA": 2,
+      "scoreB": 2,
+      "status": "finished",
       "attA": {
         "count": null,
         "names": ""
@@ -1886,5 +1886,5 @@
   "guinness": {
     "entries": []
   },
-  "updatedAt": "2026-11-19T06:45:44.426Z"
+  "updatedAt": "2026-11-19T06:46:02.126Z"
 }
