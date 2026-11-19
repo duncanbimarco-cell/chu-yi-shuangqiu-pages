@@ -288,7 +288,7 @@ tr.rank3 .rk span { color: #7a4b23; background: #f5d3ad; }
 .record-place-3 .record-place { color: #7b4a23; background: #f6d5b3; }
 .record-person { min-width: 0; flex: 1; }
 .record-person strong, .record-person span, .record-person small { display: inline; }
-.record-person strong { overflow: hidden; max-width: 68px; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.record-person strong { display: block; color: var(--text); font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
 .record-person span, .record-person small { margin-left: 4px; color: var(--muted); font-size: 9px; }
 .record-value { flex: none; color: var(--record-accent); font-size: 11px; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .record-empty { display: grid; min-height: 49px; place-items: center; gap: 3px; padding: 8px; color: #93a2b5; font-size: 10px; text-align: center; }
