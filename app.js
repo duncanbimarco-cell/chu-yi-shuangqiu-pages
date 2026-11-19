@@ -731,7 +731,8 @@
     var teams = {};
     (DATA.matches || []).forEach(function (m) {
       if (m.sport !== sport) return;
-      if (parity !== null && m.a % 2 !== parity) return;
+      // 单双数组：只要比赛双方中任意一方属于当前数组，就计入该组
+      if (parity !== null && m.a % 2 !== parity && m.b % 2 !== parity) return;
       teams[m.a] = true; teams[m.b] = true;
     });
     var rows = Object.keys(teams).map(Number).sort(function (a, b) { return a - b; }).map(function (n) {
@@ -742,6 +743,8 @@
     (DATA.matches || []).forEach(function (m) {
       if (m.sport !== sport || m.status !== 'finished') return;
       if (m.scoreA == null || m.scoreB == null) return;
+      // 单双数组：同样只要任意一方属于当前数组就计入
+      if (parity !== null && m.a % 2 !== parity && m.b % 2 !== parity) return;
       var A = rows[idx[m.a]], B = rows[idx[m.b]];
       if (!A || !B) return;
       A.p++; B.p++;
