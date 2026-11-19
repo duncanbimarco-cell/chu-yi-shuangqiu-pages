@@ -120,9 +120,9 @@
       "b": 15,
       "venue": "4/8号场地",
       "date": "",
-      "scoreA": null,
-      "scoreB": null,
-      "status": "pending",
+      "scoreA": 5,
+      "scoreB": 6,
+      "status": "finished",
       "attA": {
         "count": null,
         "names": ""
@@ -1886,5 +1886,5 @@
   "guinness": {
     "entries": []
   },
-  "updatedAt": "2026-11-19T06:46:02.126Z"
+  "updatedAt": "2026-11-19T06:46:25.198Z"
 }
