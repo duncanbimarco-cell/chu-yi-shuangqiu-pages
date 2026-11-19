@@ -327,9 +327,9 @@
       "b": 4,
       "venue": "1/5号场地",
       "date": "",
-      "scoreA": null,
-      "scoreB": null,
-      "status": "pending",
+      "scoreA": 4,
+      "scoreB": 0,
+      "status": "finished",
       "attA": {
         "count": null,
         "names": ""
@@ -1886,5 +1886,5 @@
   "guinness": {
     "entries": []
   },
-  "updatedAt": "2026-11-19T06:46:25.198Z"
+  "updatedAt": "2026-11-19T06:46:50.889Z"
 }
