@@ -93,6 +93,7 @@
   var VIEW = 'schedule';
   var SPORT_FILTER = 'all';
   var RECORD_FILTER = 'all';
+  var GUINNESS_TAB = 'student'; // 'student' | 'teacher' 吉尼斯页面当前标签
   var classFromURL = parseInt(new URLSearchParams(location.search).get('class') || '', 10);
   // 班级筛选会同步到链接里，方便直接分享给某个班，但不影响通用二维码。
   var CLASS_FILTER = classFromURL >= 1 && classFromURL <= 16 ? classFromURL : 0;
@@ -587,7 +588,9 @@
   function guinnessGenders(event) {
     return Array.isArray(event && event.genders) && event.genders.length ? event.genders : ['male', 'female'];
   }
-  function genderName(gender) { return gender === 'female' ? '女子' : '男子'; }
+  function genderName(gender) { return gender === 'female' ? '女子' : (gender === 'male' ? '男子' : '其他'); }
+  function isTeacherCategory(categoryId) { return categoryId === 'teacher'; }
+  function isTeacherEvent(eventId) { return String(eventId || '').indexOf('teacher-') === 0; }
   function ensureGuinness() {
     if (!DATA) return { entries: [] };
     if (!DATA.guinness || typeof DATA.guinness !== 'object') DATA.guinness = { entries: [] };
@@ -652,8 +655,13 @@
     };
   }
   function rankingEntries(event, gender) {
+    var isTeacherEvt = isTeacherEvent(event.id);
     return guinnessEntries().filter(function (entry) {
-      return entry && entry.eventId === event.id && entry.gender === gender && isFinite(Number(entry.value));
+      if (!entry || entry.eventId !== event.id || entry.gender !== gender || !isFinite(Number(entry.value))) return false;
+      // 教师项目只显示教师成绩，学生项目只显示学生成绩
+      if (isTeacherEvt && !entry.isTeacher) return false;
+      if (!isTeacherEvt && entry.isTeacher) return false;
+      return true;
     }).sort(recordSort(event));
   }
   function recordDateLabel(entry) {
@@ -677,8 +685,11 @@
       return '<option value="' + gender + '"' + (gender === selected ? ' selected' : '') + '>' + genderName(gender) + '</option>';
     }).join('');
   }
-  function recordEventOptions(selected) {
-    return allGuinnessEvents().map(function (meta) {
+  function recordEventOptions(selected, forTeacher) {
+    return allGuinnessEvents().filter(function (meta) {
+      if (forTeacher) return isTeacherEvent(meta.event.id);
+      return !isTeacherEvent(meta.event.id);
+    }).map(function (meta) {
       var event = meta.event;
       return '<option value="' + esc(event.id) + '"' + (event.id === selected ? ' selected' : '') + '>' + esc(meta.category.label + ' · ' + event.name) + '</option>';
     }).join('');
@@ -952,6 +963,7 @@
   /* ---------- 渲染：学校吉尼斯纪录挑战榜 ---------- */
   function recordPanelHTML(event, gender) {
     var rows = rankingEntries(event, gender).slice(0, podiumSize());
+    var isTeacher = isTeacherEvent(event.id);
     var html = '<section class="record-panel record-panel-' + gender + '">' +
       '<div class="record-panel-hd"><span class="record-gender gender-' + gender + '">' + genderName(gender) + '</span>' +
       '<span class="record-panel-rule">' + esc(recordDirectionLabel(event)) + '</span></div>';
@@ -965,7 +977,8 @@
         html += '<li class="record-row record-place-' + place + '">' +
           '<span class="record-place">' + (place === 1 ? '纪录' : place) + '</span>' +
           '<div class="record-person"><strong>' + esc(entry.name || '未填写姓名') + '</strong>' +
-          (entry.classNo ? '<span>' + esc(teamName(entry.classNo)) + '</span>' : '') +
+          (!isTeacher && entry.classNo ? '<span>' + esc(teamName(entry.classNo)) + '</span>' : '') +
+          (isTeacher ? '<span class="teacher-tag">教师</span>' : '') +
           (suffix ? '<small>' + esc(suffix) + '</small>' : '') +
           '</div><div class="record-value">' + esc(formatRecordValue(entry.value, event)) + '</div></li>';
       });
@@ -989,17 +1002,37 @@
     var categories = guinnessCategories();
     var entries = guinnessEntries();
     var eventCount = allGuinnessEvents().length;
-    var filtered = categories.filter(function (category) { return RECORD_FILTER === 'all' || category.id === RECORD_FILTER; });
+    // 学生/教师标签切换
     var html = '<section class="guinness-hero"><div class="guinness-hero-mark">🌟</div><div>' +
       '<span class="view-kicker">CAMPUS GUINNESS CHALLENGE</span><h2>学校吉尼斯纪录挑战榜</h2>' +
       '<p>所有项目均设男子、女子组别，各组公开展示前 ' + podiumSize() + ' 名，第一名为当前纪录保持者。</p></div>' +
       '<div class="guinness-hero-stats"><div><strong>' + eventCount + '</strong><span>挑战项目</span></div><div><strong>' + entries.length + '</strong><span>已录成绩</span></div></div></section>';
+    // 学生/教师切换标签
+    html += '<div class="guinness-tabs" role="tablist" aria-label="吉尼斯分组"><button data-guinness-tab="student" class="' + (GUINNESS_TAB === 'student' ? 'on' : '') + '">👨‍🎓 学生挑战</button><button data-guinness-tab="teacher" class="' + (GUINNESS_TAB === 'teacher' ? 'on' : '') + '">👨‍🏫 教师纪录</button></div>';
+    if (GUINNESS_TAB === 'teacher') {
+      // 教师纪录：只显示 teacher 类别，不显示类别筛选
+      var teacherCat = categories.filter(function (c) { return c.id === 'teacher'; })[0];
+      if (teacherCat) {
+        html += '<section class="record-category record-tone-' + esc(teacherCat.color || 'purple') + '"><div class="record-category-hd">' +
+          '<span class="record-category-icon">' + esc(teacherCat.icon || '👨‍🏫') + '</span><div><span>' + esc(teacherCat.label.toUpperCase ? teacherCat.label.toUpperCase() : teacherCat.label) + '</span><h2>' + esc(teacherCat.label) + '</h2></div>' +
+          '<em>' + (teacherCat.events || []).length + ' 项</em></div><div class="record-grid">';
+        (teacherCat.events || []).forEach(function (event) { html += recordEventHTML({ category: teacherCat, event: event }); });
+        html += '</div></section>';
+      } else {
+        html += '<div class="card"><div class="empty">暂未配置教师挑战项目</div></div>';
+      }
+      return html;
+    }
+    // 学生挑战：原有逻辑
+    var filtered = categories.filter(function (category) { return RECORD_FILTER === 'all' || category.id === RECORD_FILTER; });
     html += '<div class="record-filter" role="tablist" aria-label="挑战类别筛选"><button data-record-filter="all" class="' + (RECORD_FILTER === 'all' ? 'on' : '') + '">全部</button>';
     categories.forEach(function (category) {
+      if (category.id === 'teacher') return; // 学生页不显示教师类别筛选按钮
       html += '<button data-record-filter="' + esc(category.id) + '" class="' + (RECORD_FILTER === category.id ? 'on' : '') + '">' + esc(category.icon || '🌟') + esc(category.label) + '</button>';
     });
     html += '</div><div class="record-guide"><strong>榜单规则</strong><span>系统保留全部挑战成绩，榜单按项目和性别自动排序；距离、次数、角度和重量取高，跑步用时取低。</span></div>';
     filtered.forEach(function (category) {
+      if (category.id === 'teacher') return;
       html += '<section class="record-category record-tone-' + esc(category.color || 'blue') + '"><div class="record-category-hd">' +
         '<span class="record-category-icon">' + esc(category.icon || '🌟') + '</span><div><span>' + esc(category.label.toUpperCase ? category.label.toUpperCase() : category.label) + '</span><h2>' + esc(category.label) + '</h2></div>' +
         '<em>' + (category.events || []).length + ' 项</em></div><div class="record-grid">';
@@ -1019,13 +1052,15 @@
     }).slice(0, 10);
     var html = '<div class="card record-admin-card"><div class="card-hd"><h2>🌟 吉尼斯挑战录入</h2><span class="sub">公开显示每项前三</span></div><div class="sheet-body">' +
       '<div class="hint">录入后自动刷新男子 / 女子榜单，保留全部成绩。请核对学生完整姓名。</div><div style="height:10px"></div>' +
-      '<div class="row2"><div class="field"><label>挑战项目</label><select id="recordEvent">' + recordEventOptions(event.id) + '</select></div>' +
-      '<div class="field"><label>组别</label><select id="recordGender">' + genderOptions(event, guinnessGenders(event)[0]) + '</select></div></div>' +
+      // 学生/教师切换
+      '<div class="row2"><div class="field"><label>身份</label><select id="recordRole"><option value="student">学生</option><option value="teacher">教师</option></select></div>' +
+      '<div class="field"><label>挑战项目</label><select id="recordEvent">' + recordEventOptions(event.id, false) + '</select></div></div>' +
       '<div class="row2"><div class="field"><label>挑战者姓名</label><input type="text" id="recordName" maxlength="20" placeholder="请输入姓名"></div>' +
-      '<div class="field"><label>所在班级</label><select id="recordClass">' + classOptions(1) + '</select></div></div>' +
-      '<div class="row2"><div class="field"><label id="recordResultLabel">挑战成绩（' + esc(event.unit || '成绩') + '）</label><input type="text" id="recordResult" inputmode="decimal" placeholder="' + esc(event.hint || '请输入成绩') + '"></div>' +
-      '<div class="field"><label>挑战日期</label><input type="date" id="recordDate" value="' + todayInputValue() + '"></div></div>' +
-      '<div class="field"><label>备注（可留空）</label><input type="text" id="recordNote" maxlength="60" placeholder="例如 测试地点、裁判确认"></div>' +
+      '<div class="field" id="recordClassField"><label>所在班级</label><select id="recordClass">' + classOptions(1) + '</select></div></div>' +
+      '<div class="row2"><div class="field"><label>组别</label><select id="recordGender">' + genderOptions(event, guinnessGenders(event)[0]) + '</select></div>' +
+      '<div class="field"><label id="recordResultLabel">挑战成绩（' + esc(event.unit || '成绩') + '）</label><input type="text" id="recordResult" inputmode="decimal" placeholder="' + esc(event.hint || '请输入成绩') + '"></div></div>' +
+      '<div class="row2"><div class="field"><label>挑战日期</label><input type="date" id="recordDate" value="' + todayInputValue() + '"></div>' +
+      '<div class="field"><label>备注（可留空）</label><input type="text" id="recordNote" maxlength="60" placeholder="例如 测试地点、裁判确认"></div></div>' +
       '<div id="recordRule" class="hint" style="margin:-4px 0 12px">排序规则：' + esc(recordDirectionLabel(event)) + '。' + esc(event.hint || '') + '</div>' +
       '<button class="btn" id="saveRecordBtn">保存挑战成绩并更新榜单</button></div></div>';
     html += '<div class="card record-admin-history"><div class="card-hd"><h2>最近录入</h2><span class="sub">删除后重新排序</span></div>';
@@ -1035,7 +1070,8 @@
       recent.forEach(function (entry) {
         var entryMeta = guinnessEventMeta(entry.eventId);
         if (!entryMeta) return;
-        html += '<div class="record-history-row"><div><strong>' + esc(entry.name || '未填写姓名') + '</strong><span>' + (entry.classNo ? esc(teamName(entry.classNo)) : '班级未填') + ' · ' + esc(genderName(entry.gender)) + ' · ' + esc(entryMeta.event.name) + '</span>' +
+        var roleLabel = entry.isTeacher ? '教师' : (entry.classNo ? esc(teamName(entry.classNo)) : '班级未填');
+        html += '<div class="record-history-row"><div><strong>' + esc(entry.name || '未填写姓名') + '</strong><span>' + roleLabel + ' · ' + esc(genderName(entry.gender)) + ' · ' + esc(entryMeta.event.name) + '</span>' +
           '<small>' + esc(formatRecordValue(entry.value, entryMeta.event)) + (recordDateLabel(entry) ? ' · ' + esc(recordDateLabel(entry)) : '') + '</small></div>' +
           '<button class="record-delete" data-record-delete="' + esc(entry.id) + '" aria-label="删除这条挑战成绩">删除</button></div>';
       });
@@ -1256,6 +1292,8 @@
     }
     var recordFilter = e.target.closest('[data-record-filter]');
     if (recordFilter) { RECORD_FILTER = recordFilter.dataset.recordFilter || 'all'; render(); return; }
+    var guinnessTab = e.target.closest('[data-guinness-tab]');
+    if (guinnessTab) { GUINNESS_TAB = guinnessTab.dataset.guinnessTab || 'student'; render(); return; }
     var seg = e.target.closest('.seg button');
     if (seg) { SPORT_FILTER = seg.dataset.sport; render(); return; }
 
@@ -1328,7 +1366,7 @@
       render();
       return;
     }
-    if (e.target.id === 'recordEvent') {
+    if (e.target.id === 'recordEvent' || e.target.id === 'recordRole') {
       syncGuinnessRecordForm();
       return;
     }
@@ -1465,10 +1503,33 @@
     var value = $('#recordResult');
     var label = $('#recordResultLabel');
     var rule = $('#recordRule');
+    var roleSelect = $('#recordRole');
+    var classField = $('#recordClassField');
     if (!select || !gender || !value || !label || !rule) return;
     var meta = guinnessEventMeta(select.value);
     if (!meta) return;
     var event = meta.event;
+    var isTeacher = roleSelect && roleSelect.value === 'teacher';
+    // 教师项目只显示教师项目，学生项目只显示学生项目
+    if (isTeacher && !isTeacherEvent(event.id)) {
+      // 如果当前选的是学生项目但身份是教师，切换到第一个教师项目
+      var teacherMetas = allGuinnessEvents().filter(function (m) { return isTeacherEvent(m.event.id); });
+      if (teacherMetas.length) {
+        select.value = teacherMetas[0].event.id;
+        meta = teacherMetas[0];
+        event = meta.event;
+      }
+    } else if (!isTeacher && isTeacherEvent(event.id)) {
+      // 如果当前选的是教师项目但身份是学生，切换到第一个学生项目
+      var studentMetas = allGuinnessEvents().filter(function (m) { return !isTeacherEvent(m.event.id); });
+      if (studentMetas.length) {
+        select.value = studentMetas[0].event.id;
+        meta = studentMetas[0];
+        event = meta.event;
+      }
+    }
+    // 切换班级字段显示
+    if (classField) classField.style.display = isTeacher ? 'none' : '';
     var previousGender = gender.value;
     gender.innerHTML = genderOptions(event, previousGender);
     label.textContent = '挑战成绩（' + (event.unit || '成绩') + '）';
@@ -1486,13 +1547,15 @@
     var resultInput = $('#recordResult');
     var dateInput = $('#recordDate');
     var noteInput = $('#recordNote');
-    if (!eventSelect || !genderSelect || !nameInput || !classSelect || !resultInput) return;
+    var roleSelect = $('#recordRole');
+    if (!eventSelect || !genderSelect || !nameInput || !resultInput) return;
     var meta = guinnessEventMeta(eventSelect.value);
     if (!meta) { toast('请先选择挑战项目'); return; }
     var event = meta.event;
     var gender = genderSelect.value;
     var name = nameInput.value.trim();
-    var classNo = Number(classSelect.value);
+    var isTeacher = roleSelect && roleSelect.value === 'teacher';
+    var classNo = isTeacher ? 0 : Number(classSelect ? classSelect.value : 0);
     var result = parseRecordValue(resultInput.value, event);
     if (!name) { toast('请填写挑战者姓名'); nameInput.focus(); return; }
     if (guinnessGenders(event).indexOf(gender) < 0) { toast('该项目不支持当前组别'); return; }
@@ -1503,6 +1566,7 @@
       gender: gender,
       name: name,
       classNo: classNo,
+      isTeacher: isTeacher,
       value: result,
       recordedAt: (dateInput && dateInput.value) || todayInputValue(),
       note: noteInput ? noteInput.value.trim() : '',
