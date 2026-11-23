@@ -93,6 +93,7 @@
   var VIEW = 'schedule';
   var SPORT_FILTER = 'all';
   var RECORD_FILTER = 'all';
+  var TEACHER_RECORD_FILTER = 'all';
   var GUINNESS_TAB = 'student'; // 'student' | 'teacher' 吉尼斯页面当前标签
   var classFromURL = parseInt(new URLSearchParams(location.search).get('class') || '', 10);
   // 班级筛选会同步到链接里，方便直接分享给某个班，但不影响通用二维码。
@@ -571,7 +572,11 @@
   }
   function allGuinnessEvents() {
     var list = [];
-    guinnessCategories().forEach(function (category) {
+    var cats = guinnessCategories().slice();
+    // 如果配置里没有手写教师类别，用学生项目自动镜像生成教师项目
+    var hasTeacherConfig = cats.some(function (c) { return isTeacherCategory(c.id); });
+    if (!hasTeacherConfig) cats = cats.concat(teacherCategories());
+    cats.forEach(function (category) {
       (category.events || []).forEach(function (event) {
         list.push({ category: category, event: event });
       });
@@ -589,8 +594,29 @@
     return Array.isArray(event && event.genders) && event.genders.length ? event.genders : ['male', 'female'];
   }
   function genderName(gender) { return gender === 'female' ? '女子' : (gender === 'male' ? '男子' : '其他'); }
-  function isTeacherCategory(categoryId) { return categoryId === 'teacher'; }
+  function isTeacherCategory(categoryId) { return categoryId === 'teacher' || String(categoryId || '').indexOf('teacher-') === 0; }
   function isTeacherEvent(eventId) { return String(eventId || '').indexOf('teacher-') === 0; }
+  // 教师项目 = 学生全部项目的镜像：把学生的每个类别/项目复制一份，加 teacher- 前缀
+  function studentCategories() {
+    return guinnessCategories().filter(function (c) { return !isTeacherCategory(c.id); });
+  }
+  function teacherCategories() {
+    return studentCategories().map(function (cat) {
+      var events = (cat.events || []).map(function (ev) {
+        var copy = JSON.parse(JSON.stringify(ev));
+        copy.id = 'teacher-' + ev.id;
+        if (!copy.genders || !copy.genders.length) copy.genders = ['male', 'female'];
+        return copy;
+      });
+      return {
+        id: 'teacher-' + cat.id,
+        label: '教师' + cat.label,
+        icon: cat.icon || '👨‍🏫',
+        color: cat.color,
+        events: events
+      };
+    });
+  }
   function ensureGuinness() {
     if (!DATA) return { entries: [] };
     if (!DATA.guinness || typeof DATA.guinness !== 'object') DATA.guinness = { entries: [] };
@@ -1010,17 +1036,22 @@
     // 学生/教师切换标签
     html += '<div class="guinness-tabs" role="tablist" aria-label="吉尼斯分组"><button data-guinness-tab="student" class="' + (GUINNESS_TAB === 'student' ? 'on' : '') + '">👨‍🎓 学生挑战</button><button data-guinness-tab="teacher" class="' + (GUINNESS_TAB === 'teacher' ? 'on' : '') + '">👨‍🏫 教师纪录</button></div>';
     if (GUINNESS_TAB === 'teacher') {
-      // 教师纪录：只显示 teacher 类别，不显示类别筛选
-      var teacherCat = categories.filter(function (c) { return c.id === 'teacher'; })[0];
-      if (teacherCat) {
-        html += '<section class="record-category record-tone-' + esc(teacherCat.color || 'purple') + '"><div class="record-category-hd">' +
-          '<span class="record-category-icon">' + esc(teacherCat.icon || '👨‍🏫') + '</span><div><span>' + esc(teacherCat.label.toUpperCase ? teacherCat.label.toUpperCase() : teacherCat.label) + '</span><h2>' + esc(teacherCat.label) + '</h2></div>' +
-          '<em>' + (teacherCat.events || []).length + ' 项</em></div><div class="record-grid">';
-        (teacherCat.events || []).forEach(function (event) { html += recordEventHTML({ category: teacherCat, event: event }); });
+      // 教师纪录：镜像学生全部项目，按类别分组展示，并支持类别筛选
+      var tCats = teacherCategories();
+      var tFiltered = tCats.filter(function (c) { return TEACHER_RECORD_FILTER === 'all' || c.id === TEACHER_RECORD_FILTER; });
+      html += '<div class="record-filter" role="tablist" aria-label="教师挑战类别筛选"><button data-teacher-filter="all" class="' + (TEACHER_RECORD_FILTER === 'all' ? 'on' : '') + '">全部</button>';
+      tCats.forEach(function (c) {
+        html += '<button data-teacher-filter="' + esc(c.id) + '" class="' + (TEACHER_RECORD_FILTER === c.id ? 'on' : '') + '">' + esc(c.icon || '🌟') + esc(c.label) + '</button>';
+      });
+      html += '</div><div class="record-guide"><strong>教师榜单规则</strong><span>教师项目与学生一致，按项目和男女组展示；教师在录入页选「教师」身份即可登记，无需填写班级。距离、次数、角度和重量取高，跑步用时取低。</span></div>';
+      tFiltered.forEach(function (cat) {
+        html += '<section class="record-category record-tone-' + esc(cat.color || 'purple') + '"><div class="record-category-hd">' +
+          '<span class="record-category-icon">' + esc(cat.icon || '👨‍🏫') + '</span><div><span>' + esc(cat.label.toUpperCase ? cat.label.toUpperCase() : cat.label) + '</span><h2>' + esc(cat.label) + '</h2></div>' +
+          '<em>' + (cat.events || []).length + ' 项</em></div><div class="record-grid">';
+        (cat.events || []).forEach(function (event) { html += recordEventHTML({ category: cat, event: event }); });
         html += '</div></section>';
-      } else {
-        html += '<div class="card"><div class="empty">暂未配置教师挑战项目</div></div>';
-      }
+      });
+      if (!tFiltered.length) html += '<div class="card"><div class="empty">暂未配置教师挑战项目</div></div>';
       return html;
     }
     // 学生挑战：原有逻辑
@@ -1294,6 +1325,8 @@
     if (recordFilter) { RECORD_FILTER = recordFilter.dataset.recordFilter || 'all'; render(); return; }
     var guinnessTab = e.target.closest('[data-guinness-tab]');
     if (guinnessTab) { GUINNESS_TAB = guinnessTab.dataset.guinnessTab || 'student'; render(); return; }
+    var teacherFilter = e.target.closest('[data-teacher-filter]');
+    if (teacherFilter) { TEACHER_RECORD_FILTER = teacherFilter.dataset.teacherFilter || 'all'; render(); return; }
     var seg = e.target.closest('.seg button');
     if (seg) { SPORT_FILTER = seg.dataset.sport; render(); return; }
 
