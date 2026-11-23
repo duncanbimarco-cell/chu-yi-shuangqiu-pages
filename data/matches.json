@@ -2274,8 +2274,19 @@
         "createdAt": "2026-11-19T12:19:23.000Z",
         "sourceBatch": "fitness-top3-20261119",
         "sourceRank": 3
+      },
+      {
+        "id": "g-mwslbm4u-cgku",
+        "eventId": "martial-horse-stance",
+        "gender": "male",
+        "name": "罗词源",
+        "classNo": 13,
+        "value": 228,
+        "recordedAt": "2026-11-20",
+        "note": "汪琳老师裁判",
+        "createdAt": "2026-11-23T01:31:51.630Z"
       }
     ]
   },
-  "updatedAt": "2026-11-19T13:20:48.617Z"
+  "updatedAt": "2026-11-23T01:31:56.214Z"
 }
