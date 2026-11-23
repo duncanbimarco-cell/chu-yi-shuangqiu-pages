@@ -290,6 +290,7 @@ tr.rank3 .rk span { color: #7a4b23; background: #f5d3ad; }
 .record-person strong, .record-person span, .record-person small { display: inline; }
 .record-person strong { display: block; color: var(--text); font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
 .record-person span, .record-person small { margin-left: 4px; color: var(--muted); font-size: 9px; }
+.teacher-tag { display: inline-block; padding: 1px 5px; border-radius: 4px; background: #e8d5f2; color: #7c3aed; font-size: 9px; font-weight: 800; }
 .record-value { flex: none; color: var(--record-accent); font-size: 11px; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .record-empty { display: grid; min-height: 49px; place-items: center; gap: 3px; padding: 8px; color: #93a2b5; font-size: 10px; text-align: center; }
 .record-empty span { color: #c2d0e2; font-size: 18px; line-height: 1; }
@@ -369,6 +370,12 @@ textarea { min-height: 68px; resize: vertical; }
   .record-grid { grid-template-columns: 1fr; }
   .record-person strong { max-width: none; }
 }
+
+/* 吉尼斯学生/教师切换标签 */
+.guinness-tabs { display: flex; gap: 8px; margin: 0 0 12px; padding: 3px 1px; overflow-x: auto; scrollbar-width: none; }
+.guinness-tabs::-webkit-scrollbar { display: none; }
+.guinness-tabs button { flex: 1; min-height: 38px; padding: 8px 14px; border: 1px solid #cdddf2; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.88); font-size: 12px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.guinness-tabs button.on { border-color: var(--forest); color: #fff; background: var(--forest); box-shadow: 0 4px 9px rgba(18,75,154,.2); }
 @media (max-width: 390px) {
   .topbar-inner { gap: 8px; padding-right: 12px; padding-left: 12px; }
   .brand-mark { width: 38px; height: 38px; border-radius: 12px; }
