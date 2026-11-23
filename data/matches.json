@@ -2296,8 +2296,19 @@
         "recordedAt": "2026-11-20",
         "note": "汪琳老师裁判",
         "createdAt": "2026-11-23T01:36:26.319Z"
+      },
+      {
+        "id": "g-mwsliehh-w3zc",
+        "eventId": "martial-front-kick",
+        "gender": "female",
+        "name": "崔盤成",
+        "classNo": 2,
+        "value": 49,
+        "recordedAt": "2026-11-20",
+        "note": "汪琳老师裁判",
+        "createdAt": "2026-11-23T01:37:08.309Z"
       }
     ]
   },
-  "updatedAt": "2026-11-23T01:36:27.812Z"
+  "updatedAt": "2026-11-23T01:37:09.803Z"
 }
