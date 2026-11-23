@@ -72,6 +72,15 @@ window.APP_CONFIG = {
           { id: "martial-tornado-kick", name: "旋风脚", unit: "度", order: "desc", input: "number", hint: "例如 540" },
           { id: "martial-outside-lotus", name: "外摆莲", unit: "度", order: "desc", input: "number", hint: "例如 360" }
         ]
+      },
+      {
+        id: "teacher", label: "教师纪录", icon: "👨‍🏫", color: "purple",
+        events: [
+          { id: "teacher-run-50m", name: "50 米", unit: "秒", order: "asc", input: "decimal", genders: ["male", "female"], hint: "例如 7.20" },
+          { id: "teacher-standing-long-jump", name: "立定跳远", unit: "cm", order: "desc", input: "number", genders: ["male", "female"], hint: "例如 225" },
+          { id: "teacher-push-up", name: "俯卧撑", unit: "次", order: "desc", input: "number", genders: ["male", "female"], hint: "例如 42" },
+          { id: "teacher-sit-up", name: "仰卧起坐", unit: "次", order: "desc", input: "number", genders: ["male", "female"], hint: "例如 55" }
+        ]
       }
     ]
   }
