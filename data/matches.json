@@ -2307,8 +2307,20 @@
         "recordedAt": "2026-11-20",
         "note": "汪琳老师裁判",
         "createdAt": "2026-11-23T01:37:08.309Z"
+      },
+      {
+        "id": "g-mwunp9da-nf72",
+        "eventId": "teacher-standing-long-jump",
+        "gender": "male",
+        "name": "张永刚",
+        "classNo": 0,
+        "isTeacher": true,
+        "value": 285,
+        "recordedAt": "2026-11-24",
+        "note": "肖家河校区",
+        "createdAt": "2026-11-24T12:13:59.854Z"
       }
     ]
   },
-  "updatedAt": "2026-11-23T01:37:09.803Z"
+  "updatedAt": "2026-11-24T12:14:01.309Z"
 }
