@@ -1539,30 +1539,17 @@
     var roleSelect = $('#recordRole');
     var classField = $('#recordClassField');
     if (!select || !gender || !value || !label || !rule) return;
+    var isTeacher = !!roleSelect && roleSelect.value === 'teacher';
+    // 先重建对应身份的选项，再选择同一项目；给不存在的 option 赋值会把下拉框清空。
+    var baseId = isTeacherEvent(select.value) ? select.value.slice('teacher-'.length) : select.value;
+    var selectedId = isTeacher ? 'teacher-' + baseId : baseId;
+    select.innerHTML = recordEventOptions(selectedId, isTeacher);
+    // 切换班级字段显示
+    if (classField) classField.style.display = isTeacher ? 'none' : '';
+    // 无匹配项目时浏览器默认选择第一项，也能恢复旧版本遗留的空选择。
     var meta = guinnessEventMeta(select.value);
     if (!meta) return;
     var event = meta.event;
-    var isTeacher = roleSelect && roleSelect.value === 'teacher';
-    // 教师项目只显示教师项目，学生项目只显示学生项目
-    if (isTeacher && !isTeacherEvent(event.id)) {
-      // 如果当前选的是学生项目但身份是教师，切换到第一个教师项目
-      var teacherMetas = allGuinnessEvents().filter(function (m) { return isTeacherEvent(m.event.id); });
-      if (teacherMetas.length) {
-        select.value = teacherMetas[0].event.id;
-        meta = teacherMetas[0];
-        event = meta.event;
-      }
-    } else if (!isTeacher && isTeacherEvent(event.id)) {
-      // 如果当前选的是教师项目但身份是学生，切换到第一个学生项目
-      var studentMetas = allGuinnessEvents().filter(function (m) { return !isTeacherEvent(m.event.id); });
-      if (studentMetas.length) {
-        select.value = studentMetas[0].event.id;
-        meta = studentMetas[0];
-        event = meta.event;
-      }
-    }
-    // 切换班级字段显示
-    if (classField) classField.style.display = isTeacher ? 'none' : '';
     var previousGender = gender.value;
     gender.innerHTML = genderOptions(event, previousGender);
     label.textContent = '挑战成绩（' + (event.unit || '成绩') + '）';
@@ -1587,7 +1574,8 @@
     var event = meta.event;
     var gender = genderSelect.value;
     var name = nameInput.value.trim();
-    var isTeacher = roleSelect && roleSelect.value === 'teacher';
+    var isTeacher = !!roleSelect && roleSelect.value === 'teacher';
+    if (isTeacherEvent(event.id) !== isTeacher) { toast('身份与挑战项目不一致，请重新选择项目'); return; }
     var classNo = isTeacher ? 0 : Number(classSelect ? classSelect.value : 0);
     var result = parseRecordValue(resultInput.value, event);
     if (!name) { toast('请填写挑战者姓名'); nameInput.focus(); return; }
