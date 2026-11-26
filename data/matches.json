@@ -741,9 +741,9 @@
       "b": 12,
       "venue": "4/8号场地",
       "date": "",
-      "scoreA": null,
-      "scoreB": null,
-      "status": "pending",
+      "scoreA": 2,
+      "scoreB": 5,
+      "status": "finished",
       "attA": {
         "count": null,
         "names": ""
@@ -2322,5 +2322,5 @@
       }
     ]
   },
-  "updatedAt": "2026-11-26T08:24:59.675Z"
+  "updatedAt": "2026-11-26T08:25:10.235Z"
 }
